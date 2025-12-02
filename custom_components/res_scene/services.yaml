@@ -1,0 +1,39 @@
+create:
+  name: Create Restorable Scene
+  description: Dynamically create a scene that persist after reboot.
+  fields:
+    scene_id:
+      required: true
+      selector:
+        text:
+    snapshot_entities:
+      required: true
+      selector:
+        entity:
+          multiple: true
+  example:
+    scene_id: "living_normal"
+    snapshot_entities:
+      - light.living
+      - light.dining
+
+delete:
+  name: Delete Restorable Scene
+  description: Delete dynamically created a scene that persist after reboot.
+  fields:
+    scene_id:
+      required: true
+      selector:
+        entity:
+          domain: scene
+          integration: res_scene
+# apply:
+#   name: Apply Restorable Scene
+#   description: Apply the saved restorable scene.
+#   fields:
+#     scene_id:
+#       required: true
+#       selector:
+#         entity:
+#           domain: scene
+#           integration: res_scene
