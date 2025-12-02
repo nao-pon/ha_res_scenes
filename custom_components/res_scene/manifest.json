@@ -1,7 +1,7 @@
 {
   "domain": "res_scene",
   "name": "Res Scenes",
-  "version": "2025.12.0",
+  "version": "2025.12.1",
   "documentation": "https://github.com/nao-pon/ha_res_scenes",
   "issue_tracker": "https://github.com/nao-pon/ha_res_scenes/issues",
   "requirements": [],
