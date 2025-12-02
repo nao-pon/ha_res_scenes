@@ -21,6 +21,19 @@ _LOGGER = logging.getLogger(__name__)
 
 DISPATCHER_UPDATE = "res_scene_updated"
 
+COLOR_MODE_ATTRS = {
+    "onoff": set(),
+    "brightness": {"brightness", "brightness_pct"},
+    "hs": {"hs_color", "brightness", "brightness_pct"},
+    "rgb": {"rgb_color", "brightness", "brightness_pct"},
+    "rgbw": {"rgbw_color", "brightness", "brightness_pct"},
+    "rgbww": {"rgbww_color", "brightness", "brightness_pct"},
+    "xy": {"xy_color", "brightness", "brightness_pct"},
+    "color_temp": {"color_temp", "kelvin", "brightness", "brightness_pct"},
+}
+
+COMMON_LIGHT_ATTRS = {"effect", "flash", "transition", "white_value", "profile"}
+
 
 class ResSceneManager:
     """Managing restorable scenes"""
@@ -113,8 +126,11 @@ class ResSceneManager:
         """Restore state + attributes for each entity with sequential calls and delay"""
         domain = eid.split(".")[0]
         state = info.get("state")
-        attrs = info.get("attributes", {})
         target = {"entity_id": eid}
+        attrs = {}
+        for _key, _value in info.get("attributes", {}).items():
+            if _value is not None:
+                attrs[_key] = _value
 
         if state is None:
             _LOGGER.warning("Saved state is None, skip.")
@@ -154,9 +170,17 @@ class ResSceneManager:
         # ---- light ----
         if domain == "light":
             service = "turn_on" if state == "on" else "turn_off"
-            data = {}
+            data = {"entity_id": eid}
             if state == "on":
-                data.update(attrs)
+                color_mode = attrs.get("color_mode", "onoff")
+                allowed_attrs = COLOR_MODE_ATTRS.get(color_mode, set())
+                safe_attrs = {
+                    k: v
+                    for k, v in attrs.items()
+                    if k in allowed_attrs or k in COMMON_LIGHT_ATTRS
+                }
+                data.update(safe_attrs)
+
             await call_service("light", service, data, target)
 
         # ---- cover ----
