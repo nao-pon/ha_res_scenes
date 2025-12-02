@@ -6,11 +6,16 @@ create:
       name: Scene ID
       description: Identifier for the persistent scene to be created.
       required: true
+      selector:
+        text:
       example: evening_mode
     snapshot_entities:
       name: Snapshot Entities
       description: List of entity IDs to snapshot.
       required: true
+      selector:
+        entity:
+          multiple: true
       example:
         - light.living_room
         - switch.aircon
@@ -23,4 +28,8 @@ delete:
       name: Scene Entity
       description: The persistent scene entity to delete (e.g., scene.xxx).
       required: true
+      selector:
+        entity:
+          domain: scene
+          integration: res_scene
       example: scene.evening_mode
