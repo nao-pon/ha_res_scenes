@@ -1,39 +1,26 @@
 create:
-  name: Create Restorable Scene
-  description: Dynamically create a scene that persist after reboot.
+  name: Create Persistent Scene
+  description: Create a persistent scene by capturing the current state of specified entities.
   fields:
     scene_id:
+      name: Scene ID
+      description: Identifier for the persistent scene to be created.
       required: true
-      selector:
-        text:
+      example: evening_mode
     snapshot_entities:
+      name: Snapshot Entities
+      description: List of entity IDs to snapshot.
       required: true
-      selector:
-        entity:
-          multiple: true
-  example:
-    scene_id: "living_normal"
-    snapshot_entities:
-      - light.living
-      - light.dining
+      example:
+        - light.living_room
+        - switch.aircon
 
 delete:
-  name: Delete Restorable Scene
-  description: Delete dynamically created a scene that persist after reboot.
+  name: Delete Persistent Scene
+  description: Delete a previously created persistent scene.
   fields:
     entity_id:
+      name: Scene Entity
+      description: The persistent scene entity to delete (e.g., scene.xxx).
       required: true
-      selector:
-        entity:
-          domain: scene
-          integration: res_scene
-# apply:
-#   name: Apply Restorable Scene
-#   description: Apply the saved restorable scene.
-#   fields:
-#     entity_id:
-#       required: true
-#       selector:
-#         entity:
-#           domain: scene
-#           integration: res_scene
+      example: scene.evening_mode

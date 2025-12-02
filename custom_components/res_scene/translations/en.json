@@ -1,0 +1,29 @@
+{
+  "title": "Restorable Scenes",
+  "services": {
+    "create": {
+      "name": "Create Persistent Scene",
+      "description": "Create a persistent scene by capturing the current state of specified entities.",
+      "fields": {
+        "scene_id": {
+          "name": "Scene ID",
+          "description": "Identifier for the persistent scene to be created."
+        },
+        "snapshot_entities": {
+          "name": "Snapshot Entities",
+          "description": "List of entity IDs to snapshot."
+        }
+      }
+    },
+    "delete": {
+      "name": "Delete Persistent Scene",
+      "description": "Delete a previously created persistent scene.",
+      "fields": {
+        "entity_id": {
+          "name": "Scene Entity",
+          "description": "The persistent scene entity to delete (e.g., scene.xxx)."
+        }
+      }
+    }
+  }
+}

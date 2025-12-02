@@ -1,0 +1,29 @@
+{
+  "title": "永続シーン",
+  "services": {
+    "create": {
+      "name": "永続シーンを作成",
+      "description": "指定したエンティティの現在の状態を保存して、永続シーンを作成します。",
+      "fields": {
+        "scene_id": {
+          "name": "シーンID",
+          "description": "作成する永続シーンの識別子。"
+        },
+        "snapshot_entities": {
+          "name": "スナップショット対象エンティティ",
+          "description": "状態を保存する entity_id のリスト。"
+        }
+      }
+    },
+    "delete": {
+      "name": "永続シーンを削除",
+      "description": "作成済みの永続シーンを削除します。",
+      "fields": {
+        "entity_id": {
+          "name": "シーンエンティティ",
+          "description": "削除するシーンの entity_id（例: scene.xxx）。"
+        }
+      }
+    }
+  }
+}

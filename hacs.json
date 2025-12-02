@@ -1,0 +1,7 @@
+{
+  "name": "Restorable Scenes",
+  "content_in_root": false,
+  "domains": ["res_scene"],
+  "homeassistant": "2024.1.0",
+  "render_readme": true
+}
