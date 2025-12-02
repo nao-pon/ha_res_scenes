@@ -21,7 +21,7 @@ delete:
   name: Delete Restorable Scene
   description: Delete dynamically created a scene that persist after reboot.
   fields:
-    scene_id:
+    entity_id:
       required: true
       selector:
         entity:
@@ -31,7 +31,7 @@ delete:
 #   name: Apply Restorable Scene
 #   description: Apply the saved restorable scene.
 #   fields:
-#     scene_id:
+#     entity_id:
 #       required: true
 #       selector:
 #         entity:

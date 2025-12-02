@@ -32,14 +32,14 @@ async def async_setup_entry(hass, entry):
             await hass.data[DOMAIN]["manager"].save_scene(scene_id, snapshot_entities)
 
     async def delete_scene(call):
-        entity_id = call.data.get("scene_id")
+        entity_id = call.data.get("entity_id")
         if entity_id:
             if entity := hass.data[DOMAIN]["entities"].get(entity_id):
                 scene_id = entity._scene_id
                 await hass.data[DOMAIN]["manager"].delete_scene(scene_id)
 
     async def apply_scene(call):
-        entity_id = call.data.get("scene_id")
+        entity_id = call.data.get("entity_id")
         if entity_id:
             if entity := hass.data[DOMAIN]["entities"].get(entity_id):
                 scene_id = entity._scene_id
