@@ -19,7 +19,7 @@
         },
         "restore_light_attributes": {
           "name": "Restore light attributes",
-          "description": "When enabled, light attributes such as brightness and color are restored even if the light was off at the time of snapshot. Note: OFF lights are temporarily turned ON to capture their attributes, then turned back OFF."
+          "description": "When enabled, light attributes such as brightness and color are restored even if the light was off at the time of snapshot. Note: OFF lights are temporarily turned ON so their attributes can be processed, then turned OFF again."
         }
       }
     },
