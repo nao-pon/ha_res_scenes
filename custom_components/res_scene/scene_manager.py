@@ -72,21 +72,24 @@ class ResSceneManager:
 
             unsub = async_track_state_change(self.hass, [eid], callback)
 
-            # temporarily turn on
-            await self.hass.services.async_call(
-                "light", "turn_on", {"entity_id": eid}, blocking=True
-            )
-
-            # wait for state to reflect
             try:
-                state_obj = await asyncio.wait_for(future, timeout=1.0)
-            except asyncio.TimeoutError:
-                state_obj = self.hass.states.get(eid)  # fallback
+                # temporarily turn on
+                await self.hass.services.async_call(
+                    "light", "turn_on", {"entity_id": eid}, blocking=True
+                )
 
-            # restore turn off
-            await self.hass.services.async_call("light", "turn_off", {"entity_id": eid})
+                # wait for state to reflect
+                try:
+                    state_obj = await asyncio.wait_for(future, timeout=1.0)
+                except asyncio.TimeoutError:
+                    state_obj = self.hass.states.get(eid)  # fallback
 
-            unsub()
+                # restore turn off
+                await self.hass.services.async_call(
+                    "light", "turn_off", {"entity_id": eid}
+                )
+            finally:
+                unsub()
 
             return {"states": state_obj, "save_state": state}
 
