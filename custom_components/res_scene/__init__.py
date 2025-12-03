@@ -28,8 +28,15 @@ async def async_setup_entry(hass, entry):
     async def save_scene(call):
         scene_id = call.data.get("scene_id")
         snapshot_entities = call.data.get("snapshot_entities", [])
+        options = {
+            "restore_light_attributes": call.data.get(
+                "restore_light_attributes", False
+            ),
+        }
         if scene_id and snapshot_entities:
-            await hass.data[DOMAIN]["manager"].save_scene(scene_id, snapshot_entities)
+            await hass.data[DOMAIN]["manager"].save_scene(
+                scene_id, snapshot_entities, options
+            )
 
     async def delete_scene(call):
         entity_id = call.data.get("entity_id")
