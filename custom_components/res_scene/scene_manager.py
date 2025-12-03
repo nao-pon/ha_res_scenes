@@ -111,7 +111,11 @@ class ResSceneManager:
                 continue
 
             if state_obj := self.hass.states.get(eid):
-                if domain == "light" and state_obj.state == "off":
+                if (
+                    options.get("restore_light_attributes")
+                    and domain == "light"
+                    and state_obj.state == "off"
+                ):
                     # Make async snapshot task
                     tasks.append(snapshot_light(eid, "off"))
                 else:
