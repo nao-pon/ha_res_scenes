@@ -91,7 +91,7 @@ class ResSceneManager:
             finally:
                 unsub()
 
-            return {"states": state_obj, "save_state": state}
+            return {"state_obj": state_obj, "save_state": state}
 
         tasks = []
         for eid in snapshot_entities:
