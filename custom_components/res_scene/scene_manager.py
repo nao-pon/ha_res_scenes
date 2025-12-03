@@ -61,7 +61,7 @@ class ResSceneManager:
         options = options or {}
         states = {}
 
-        async def snapshot_light(eid: str):
+        async def snapshot_light(eid: str, state: str):
             """Take snapshot for a single light"""
             state_obj = self.hass.states.get(eid)
             future = asyncio.Future()
@@ -88,7 +88,7 @@ class ResSceneManager:
 
             unsub()
 
-            return state_obj
+            return {"states": state_obj, "save_state": state}
 
         tasks = []
         for eid in snapshot_entities:
@@ -110,7 +110,7 @@ class ResSceneManager:
             if state_obj := self.hass.states.get(eid):
                 if domain == "light" and state_obj.state == "off":
                     # Make async snapshot task
-                    tasks.append(snapshot_light(eid))
+                    tasks.append(snapshot_light(eid, "off"))
                 else:
                     # Add what is readily available immediately
                     states[eid] = {
@@ -121,11 +121,13 @@ class ResSceneManager:
         # Run in parallel and combine the results
         if tasks:
             results = await asyncio.gather(*tasks)
-            for state_obj in results:
+            for result in results:
+                state_obj = result["state_obj"]
+                save_state = result["save_state"]
                 if state_obj:
                     eid = state_obj.entity_id
                     states[eid] = {
-                        "state": state_obj.state,
+                        "state": save_state,
                         "attributes": deepcopy(state_obj.attributes),
                     }
 
@@ -150,10 +152,11 @@ class ResSceneManager:
 
     async def apply_scene(self, scene_id) -> bool:
         """Apply a saved scene"""
-        states = self.stored_data.get(scene_id)
-        if not states:
+        if scene_id not in self.stored_data:
             _LOGGER.warning("Scene %s not found", scene_id)
             return False
+
+        states = deepcopy(self.stored_data[scene_id])
         options = states.pop("_options", {})
 
         success = True
