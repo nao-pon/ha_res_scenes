@@ -21,7 +21,7 @@ create:
         - switch.aircon
     options:
       name: Options
-      subscription: Additional options for scene creation.
+      description: Additional options for scene creation.
       # selector:
       #   object:
       fields:
