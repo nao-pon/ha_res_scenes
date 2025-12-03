@@ -13,7 +13,9 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.event import async_track_state_change
 
 from .const import DOMAIN
 
@@ -38,7 +40,7 @@ COMMON_LIGHT_ATTRS = {"effect", "flash", "transition", "white_value", "profile"}
 class ResSceneManager:
     """Managing restorable scenes"""
 
-    def __init__(self, hass, store, stored_data):
+    def __init__(self, hass: HomeAssistant, store, stored_data):
         self.hass = hass
         self.store = store
         self.stored_data = (
@@ -52,9 +54,43 @@ class ResSceneManager:
             async_dispatcher_send(self.hass, f"{DOMAIN}_scene_added", scene_id)
         _LOGGER.info("Restored %s scenes", len(self.stored_data))
 
-    async def save_scene(self, scene_id, snapshot_entities):
+    async def save_scene(
+        self, scene_id: str, snapshot_entities: list, options: dict | None = None
+    ):
         """Save the state and attributes of the specified entity"""
+        options = options or {}
         states = {}
+
+        async def snapshot_light(eid: str):
+            """Take snapshot for a single light"""
+            state_obj = self.hass.states.get(eid)
+            future = asyncio.Future()
+
+            def callback(entity_id, old_state, new_state, fut=future):
+                if not fut.done() and new_state.state == "on" and new_state.attributes:
+                    fut.set_result(new_state)
+
+            unsub = async_track_state_change(self.hass, [eid], callback)
+
+            # temporarily turn on
+            await self.hass.services.async_call(
+                "light", "turn_on", {"entity_id": eid}, blocking=True
+            )
+
+            # wait for state to reflect
+            try:
+                state_obj = await asyncio.wait_for(future, timeout=1.0)
+            except asyncio.TimeoutError:
+                state_obj = self.hass.states.get(eid)  # fallback
+
+            # restore turn off
+            await self.hass.services.async_call("light", "turn_off", {"entity_id": eid})
+
+            unsub()
+
+            return state_obj
+
+        tasks = []
         for eid in snapshot_entities:
             domain = eid.split(".")[0]
             if domain in (
@@ -71,12 +107,29 @@ class ResSceneManager:
                 )
                 continue
 
-            state_obj = self.hass.states.get(eid)
-            if state_obj:
-                states[eid] = {
-                    "state": state_obj.state,
-                    "attributes": deepcopy(state_obj.attributes),
-                }
+            if state_obj := self.hass.states.get(eid):
+                if domain == "light" and state_obj.state == "off":
+                    # Make async snapshot task
+                    tasks.append(snapshot_light(eid))
+                else:
+                    # Add what is readily available immediately
+                    states[eid] = {
+                        "state": state_obj.state,
+                        "attributes": deepcopy(state_obj.attributes),
+                    }
+
+        # Run in parallel and combine the results
+        if tasks:
+            results = await asyncio.gather(*tasks)
+            for state_obj in results:
+                if state_obj:
+                    eid = state_obj.entity_id
+                    states[eid] = {
+                        "state": state_obj.state,
+                        "attributes": deepcopy(state_obj.attributes),
+                    }
+
+        states["_options"] = options
         self.stored_data[scene_id] = states
         await self.store.async_save(self.stored_data)
         async_dispatcher_send(self.hass, f"{DOMAIN}_scene_added", scene_id)
@@ -101,13 +154,14 @@ class ResSceneManager:
         if not states:
             _LOGGER.warning("Scene %s not found", scene_id)
             return False
+        options = states.pop("_options", {})
 
         success = True
 
         async def safe_apply(eid, info):
             nonlocal success
             try:
-                await self.apply_state(eid, info)
+                await self.apply_state(eid, info, options)
             except Exception as e:  # noqa: BLE001
                 success = False
                 _LOGGER.error(
@@ -122,7 +176,7 @@ class ResSceneManager:
             _LOGGER.warning("Scene %s applied with errors", scene_id)
         return success
 
-    async def apply_state(self, eid: str, info: dict):
+    async def apply_state(self, eid: str, info: dict, options: dict):
         """Restore state + attributes for each entity with sequential calls and delay"""
         domain = eid.split(".")[0]
         state = info.get("state")
@@ -132,7 +186,7 @@ class ResSceneManager:
             if _value is not None:
                 attrs[_key] = _value
 
-        if state is None:
+        if not state:
             _LOGGER.warning("Saved state is None, skip.")
             return
 
@@ -169,19 +223,25 @@ class ResSceneManager:
 
         # ---- light ----
         if domain == "light":
-            service = "turn_on" if state == "on" else "turn_off"
-            data = {"entity_id": eid}
-            if state == "on":
-                color_mode = attrs.get("color_mode", "onoff")
-                allowed_attrs = COLOR_MODE_ATTRS.get(color_mode, set())
-                safe_attrs = {
-                    k: v
-                    for k, v in attrs.items()
-                    if k in allowed_attrs or k in COMMON_LIGHT_ATTRS
-                }
-                data.update(safe_attrs)
+            restore_attrs = options.get("restore_light_attributes", False)
+            should_restore = (state == "on") or restore_attrs
 
-            await call_service("light", service, data, target)
+            color_mode = attrs.get("color_mode", "onoff")
+            allowed_attrs = COLOR_MODE_ATTRS.get(color_mode, set())
+            safe_attrs = {
+                k: v
+                for k, v in attrs.items()
+                if k in allowed_attrs or k in COMMON_LIGHT_ATTRS
+            }
+
+            if should_restore:
+                data = {"entity_id": eid, **safe_attrs}
+                await call_service("light", "turn_on", data, target=target)
+
+            if state == "off":
+                await call_service(
+                    "light", "turn_off", {"entity_id": eid}, target=target
+                )
 
         # ---- cover ----
         elif domain == "cover":

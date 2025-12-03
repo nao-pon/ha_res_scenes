@@ -19,6 +19,18 @@ create:
       example:
         - light.living_room
         - switch.aircon
+    options:
+      name: Options
+      description: Additional options for scene creation.
+      selector:
+        object:
+      fields:
+        restore_light_attributes:
+          name: Restore light attributes
+          description: Restore brightness, color, etc., even if the light is off.
+          selector:
+            boolean:
+              mode: switch
 
 delete:
   name: Delete Persistent Scene

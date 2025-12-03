@@ -12,6 +12,14 @@
         "snapshot_entities": {
           "name": "スナップショット対象エンティティ",
           "description": "状態を保存する entity_id のリスト。"
+        },
+        "options": {
+          "name": "オプション",
+          "description": "シーン作成に関する追加オプションです。"
+        },
+        "restore_light_attributes": {
+          "name": "ライト属性の復元",
+          "description": "有効にすると、スナップショット時にライトがオフでも、明るさや色などのライト属性を復元します。 注意: OFF のライトは一時的に点灯して属性を取得し、その後再び OFF に戻されます。"
         }
       }
     },
