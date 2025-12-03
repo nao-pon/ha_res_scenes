@@ -52,6 +52,7 @@ Create a persistent scene by capturing the current state of the specified entiti
 |-------|----------|-------------|
 | `scene_id` | Yes | Identifier for the persistent scene |
 | `snapshot_entities` | Yes | List of entity IDs to snapshot |
+| `restore_light_attributes` | No | Restore light attributes |
 
 **Example**
 
@@ -63,6 +64,7 @@ data:
     - light.living_room
     - switch.aircon
     - media_player.tv
+  restore_light_attributes: true
 ````
 
 Once created, this scene becomes available as:
