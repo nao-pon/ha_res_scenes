@@ -44,8 +44,12 @@
           "delete_scene": "Delete a scene",
           "rename_from": "Rename from",
           "rename_to": "Rename to"
+        },
+        "errors": {
+          "rename_scene_already_exists": "A scene with this name already exists."
         }
       }
     }
   }
 }
+

@@ -44,6 +44,9 @@
           "delete_scene": "シーンを削除",
           "rename_from": "名前変更（元）",
           "rename_to": "名前変更（新しい名前）"
+        },
+        "errors": {
+          "rename_scene_already_exists": "この名前のシーンはすでに存在します。"
         }
       }
     }

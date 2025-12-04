@@ -13,6 +13,7 @@ class ResSceneOptionsFlow(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None):
         hass = self.hass
         manager = hass.data[DOMAIN]["manager"]
+        errors = {}
 
         restore_light_attributes = self.config_entry.options.get(
             "restore_light_attributes", False
@@ -48,6 +49,7 @@ class ResSceneOptionsFlow(config_entries.OptionsFlow):
                             rename_to,
                             rename_from,
                         )
+                        errors["rename_to"] = "rename_scene_already_exists"
                     else:
                         manager.stored_data[rename_to] = manager.stored_data.pop(
                             rename_from
@@ -61,6 +63,11 @@ class ResSceneOptionsFlow(config_entries.OptionsFlow):
                             self.hass, f"{DOMAIN}_scene_added", rename_to
                         )
 
-            return self.async_create_entry(title="", data=user_input)
+            if errors:
+                return self.async_show_form(
+                    step_id="init", data_schema=schema, errors=errors
+                )
+            else:
+                return self.async_create_entry(title="", data=user_input)
 
         return self.async_show_form(step_id="init", data_schema=schema)
