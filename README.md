@@ -70,7 +70,7 @@ data:
 Once created, this scene becomes available as:
 
 ```
-scene.evening_mode
+scene.res_evening_mode
 ```
 
 Activate it via:
