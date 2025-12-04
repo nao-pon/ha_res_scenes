@@ -33,5 +33,19 @@
         }
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Res Scenes オプション",
+        "description": "デフォルトオプションの設定やシーン管理を行います。",
+        "data": {
+          "restore_light_attributes": "シーン保存時にライト属性を復元する",
+          "delete_scene": "シーンを削除",
+          "rename_from": "名前変更（元）",
+          "rename_to": "名前変更（新しい名前）"
+        }
+      }
+    }
   }
 }

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from copy import deepcopy
+from typing import Any
 
 from homeassistant.const import (
     STATE_CLOSED,
@@ -43,12 +44,13 @@ class ResSceneManager:
     def __init__(self, hass: HomeAssistant, store, stored_data):
         self.hass = hass
         self.store = store
-        self.stored_data = (
+        self.stored_data: dict[str, Any] = (
             stored_data  # {scene_id: {entity_id: {"state": ..., "attributes": {...}}}}
         )
+        self._user_options: dict[str, Any] = {}
 
     async def restore_scenes(self):
-        """Restore saved scenes on restart (EntityRegistry creation)"""
+        """Restore saved scenes on restart (EntityRegidict[str, Any]stry creation)"""
         for scene_id in self.stored_data.keys():
             # await self.create_or_update_scene(scene_id)
             async_dispatcher_send(self.hass, f"{DOMAIN}_scene_added", scene_id)
@@ -58,7 +60,8 @@ class ResSceneManager:
         self, scene_id: str, snapshot_entities: list, options: dict | None = None
     ):
         """Save the state and attributes of the specified entity"""
-        options = options or {}
+        _options = deepcopy(self._user_options)
+        _options.update(options or {})
         states = {}
 
         async def snapshot_light(eid: str, state: str):
@@ -112,7 +115,7 @@ class ResSceneManager:
 
             if state_obj := self.hass.states.get(eid):
                 if (
-                    options.get("restore_light_attributes")
+                    _options.get("restore_light_attributes")
                     and domain == "light"
                     and state_obj.state == "off"
                 ):
@@ -163,15 +166,16 @@ class ResSceneManager:
             _LOGGER.warning("Scene %s not found", scene_id)
             return False
 
-        states = deepcopy(self.stored_data[scene_id])
-        options = states.pop("_options", {})
+        states = deepcopy(self.stored_data[scene_id] or {})
+        _options = deepcopy(self._user_options)
+        _options.update(states.pop("_options", {}))
 
         success = True
 
         async def safe_apply(eid, info):
             nonlocal success
             try:
-                await self.apply_state(eid, info, options)
+                await self.apply_state(eid, info, _options)
             except Exception as e:  # noqa: BLE001
                 success = False
                 _LOGGER.error(
@@ -417,3 +421,6 @@ class ResSceneManager:
 
     def get_scene(self, scene_id):
         return self.stored_data.get(scene_id)
+
+    def set_user_options(self, user_options: dict):
+        self._user_options = user_options

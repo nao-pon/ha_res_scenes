@@ -33,5 +33,19 @@
         }
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Res Scenes Options",
+        "description": "Configure default options and manage saved scenes.",
+        "data": {
+          "restore_light_attributes": "Restore light attributes when capturing a scene",
+          "delete_scene": "Delete a scene",
+          "rename_from": "Rename from",
+          "rename_to": "Rename to"
+        }
+      }
+    }
   }
 }
