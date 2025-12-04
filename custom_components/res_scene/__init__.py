@@ -13,7 +13,6 @@ async def async_setup_entry(hass, entry):
     stored_data = await store.async_load() or {}
 
     # make DOMAIN key
-    hass.data.setdefault(DOMAIN, {})
     hass.data.setdefault(DOMAIN, {"entities": {}})
 
     # initialize manager
