@@ -44,9 +44,8 @@ class ResSceneManager:
     def __init__(self, hass: HomeAssistant, store, stored_data):
         self.hass = hass
         self.store = store
-        self.stored_data: dict[str, Any] = (
-            stored_data  # {scene_id: {entity_id: {"state": ..., "attributes": {...}}}}
-        )
+        self.stored_data: dict[str, Any] = stored_data
+        # stored_data: {scene_id: {entity_id: {"state": ..., "attributes": {...}}}}
         self._user_options: dict[str, Any] = {}
 
     async def restore_scenes(self):
@@ -423,4 +422,4 @@ class ResSceneManager:
         return self.stored_data.get(scene_id)
 
     def set_user_options(self, user_options: dict):
-        self._user_options = user_options
+        self._user_options = deepcopy(user_options)
