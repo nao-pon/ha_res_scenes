@@ -78,7 +78,7 @@ Activate it via:
 ```yaml
 service: scene.turn_on
 target:
-  entity_id: res_scene.evening_mode
+  entity_id: scene.res_evening_mode
 ```
 
 ---
