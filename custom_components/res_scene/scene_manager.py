@@ -50,7 +50,7 @@ class ResSceneManager:
         self._user_options: dict[str, Any] = {}
 
     async def restore_scenes(self):
-        """Restore saved scenes on restart (EntityRegidict[str, Any]stry creation)"""
+        """Restore saved scenes on restart (EntityRegistry creation)"""
         for scene_id in self.stored_data.keys():
             # await self.create_or_update_scene(scene_id)
             async_dispatcher_send(self.hass, f"{DOMAIN}_scene_added", scene_id)
