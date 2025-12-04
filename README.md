@@ -78,7 +78,7 @@ Activate it via:
 ```yaml
 service: scene.turn_on
 target:
-  entity_id: scene.evening_mode
+  entity_id: res_scene.evening_mode
 ```
 
 ---
@@ -95,7 +95,7 @@ This service now uses **`entity_id`**, not `scene_id`.
 ```yaml
 service: res_scene.delete
 data:
-  entity_id: scene.evening_mode
+  entity_id: scene.res_evening_mode
 ```
 
 ---
