@@ -47,7 +47,7 @@ async def async_setup_entry(hass, entry):
         # If no scene_id, raise an error
         if scene_id is None:
             raise HomeAssistantError(
-                "No 'scene_id' was provided. The field 'scene_id' is required to create a persistent scene.",
+                "Missing required field: scene_id.",
                 translation_key="no_scene_id",
             )
 
@@ -83,7 +83,7 @@ async def async_setup_entry(hass, entry):
         # If no valid entities remain, raise an error
         if not snapshot_entities:
             raise HomeAssistantError(
-                "No valid entities were found. At least one entity, area, or label must resolve to existing entities.",
+                "No valid entities found.",
                 translation_key="no_valid_entities",
             )
 
