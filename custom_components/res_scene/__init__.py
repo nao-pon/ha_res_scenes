@@ -10,16 +10,16 @@ from .scene_manager import ResSceneManager
 PLATFORMS = ["scene", "select"]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """
     Set up the integration entry by initializing storage and the scene manager, restoring saved scenes, forwarding platform setups, and registering scene services.
-    
+
     Parameters:
         hass (HomeAssistant): Home Assistant core instance.
         entry (ConfigEntry): Configuration entry for this integration.
-    
+
     Returns:
-        True if setup completed successfully, False otherwise.
+        True when setup completes successfully.
     """
     store = Store(hass, STORE_VERSION, f"{DOMAIN}.json")
     stored_data = await store.async_load() or {}
@@ -50,7 +50,7 @@ async def async_setup_entry(hass: HomeAssistant, entry):
     async def save_scene(call):
         """
         Create or update a saved scene from the provided service call data and persist it via the scene manager.
-        
+
         Parameters:
             call (homeassistant.core.ServiceCall): Service call containing scene data. Expected keys in call.data:
                 - "scene_id": identifier for the scene (required).
@@ -58,7 +58,7 @@ async def async_setup_entry(hass: HomeAssistant, entry):
                 - "snapshot_areas": optional iterable of area_ids whose entities will be included.
                 - "snapshot_labels": optional iterable of label ids whose entities will be included.
                 - any user option keys to override manager defaults.
-        
+
         Raises:
             HomeAssistantError: If "scene_id" is missing or if no valid entities are found to include in the scene.
         """
@@ -88,10 +88,11 @@ async def async_setup_entry(hass: HomeAssistant, entry):
 
         # Expand entities from labels
         snapshot_labels = call.data.get("snapshot_labels") or []
+        all_entites = ent_reg.entities.values()
         for label_id in snapshot_labels:
             label_entities = [
                 entry.entity_id
-                for entry in ent_reg.entities.values()
+                for entry in all_entites
                 if label_id in getattr(entry, "labels", set())
             ]
             snapshot_entities.update(label_entities)
@@ -124,7 +125,7 @@ async def async_setup_entry(hass: HomeAssistant, entry):
     async def delete_scene(call):
         """
         Delete the scene associated with the provided scene entity, if one exists.
-        
+
         Parameters:
             call (ServiceCall): Service call data containing the "entity_id" of the scene entity to delete. If "entity_id" is missing or the entity is not associated with a stored scene, the function does nothing.
         """
@@ -151,7 +152,7 @@ async def async_setup_entry(hass: HomeAssistant, entry):
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """
     Unload the integration's platforms and remove its manager instance from hass.data.
-    
+
     Returns:
         True if platforms were unloaded successfully, False otherwise.
     """
