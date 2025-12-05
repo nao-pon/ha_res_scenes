@@ -10,7 +10,7 @@ from .scene_manager import ResSceneManager
 PLATFORMS = ["scene", "select"]
 
 
-async def async_setup_entry(hass, entry):
+async def async_setup_entry(hass: HomeAssistant, entry):
     store = Store(hass, STORE_VERSION, f"{DOMAIN}.json")
     stored_data = await store.async_load() or {}
 
@@ -41,7 +41,7 @@ async def async_setup_entry(hass, entry):
         scene_id = call.data.get("scene_id", "")
 
         # If no scene_id, raise an error
-        if scene_id != "":
+        if not scene_id:
             raise HomeAssistantError(
                 "Missing required field: scene_id.",
                 translation_key="no_scene_id",
