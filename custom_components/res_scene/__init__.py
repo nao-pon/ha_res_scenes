@@ -1,11 +1,7 @@
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import (
-    area_registry,
-    entity_registry,
-    label_registry,
-)
+from homeassistant.helpers import entity_registry
 from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN, STORE_VERSION
@@ -56,20 +52,24 @@ async def async_setup_entry(hass, entry):
         # Collect snapshot entities (initial list)
         snapshot_entities = set(call.data.get("snapshot_entities") or [])
 
-        # Get registries
-        area_reg = area_registry.async_get(hass)
-        label_reg = label_registry.async_get(hass)
+        # Get entity registry
+        ent_reg = entity_registry.async_get(hass)
 
         # Expand entities from areas
         snapshot_areas = call.data.get("snapshot_areas") or []
+        ent_reg = entity_registry.async_get(hass)
         for area_id in snapshot_areas:
-            area_entities = area_reg.async_get_area_entities(area_id)
-            snapshot_entities.update(area_entities)
+            area_entries = entity_registry.async_entries_for_area(ent_reg, area_id)
+            snapshot_entities.update(entry.entity_id for entry in area_entries)
 
         # Expand entities from labels
         snapshot_labels = call.data.get("snapshot_labels") or []
         for label_id in snapshot_labels:
-            label_entities = label_reg.async_get_label_entities(label_id)
+            label_entities = [
+                entry.entity_id
+                for entry in ent_reg.entities.values()
+                if label_id in getattr(entry, "labels", set())
+            ]
             snapshot_entities.update(label_entities)
 
         # Filter out non-existing entities
