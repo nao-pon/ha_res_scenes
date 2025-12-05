@@ -1,5 +1,11 @@
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import (
+    area_registry,
+    entity_registry,
+    label_registry,
+)
 from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN, STORE_VERSION
@@ -37,13 +43,58 @@ async def async_setup_entry(hass, entry):
     # regist service
     async def save_scene(call):
         scene_id = call.data.get("scene_id")
-        snapshot_entities = call.data.get("snapshot_entities", [])
+
+        # If no scene_id, raise an error
+        if scene_id is None:
+            raise HomeAssistantError(
+                "No 'scene_id' was provided. The field 'scene_id' is required to create a persistent scene.",
+                translation_key="no_scene_id",
+            )
+
+        manager = hass.data[DOMAIN]["manager"]
+
+        # Collect snapshot entities (initial list)
+        snapshot_entities = set(call.data.get("snapshot_entities") or [])
+
+        # Get registries
+        area_reg = area_registry.async_get(hass)
+        label_reg = label_registry.async_get(hass)
+
+        # Expand entities from areas
+        snapshot_areas = call.data.get("snapshot_areas") or []
+        for area_id in snapshot_areas:
+            area_entities = area_reg.async_get_area_entities(area_id)
+            snapshot_entities.update(area_entities)
+
+        # Expand entities from labels
+        snapshot_labels = call.data.get("snapshot_labels") or []
+        for label_id in snapshot_labels:
+            label_entities = label_reg.async_get_label_entities(label_id)
+            snapshot_entities.update(label_entities)
+
+        # Filter out non-existing entities
+        states = hass.states
+        snapshot_entities = {
+            entity_id
+            for entity_id in snapshot_entities
+            if states.get(entity_id) is not None
+        }
+
+        # If no valid entities remain, raise an error
+        if not snapshot_entities:
+            raise HomeAssistantError(
+                "No valid entities were found. At least one entity, area, or label must resolve to existing entities.",
+                translation_key="no_valid_entities",
+            )
+
+        # Build options dictionary using user options defaults
         options = {
             key: call.data.get(key, default)
             for key, default in manager._user_options.items()
         }
-        if scene_id and snapshot_entities:
-            await manager.save_scene(scene_id, snapshot_entities, options)
+
+        # Save scene
+        await manager.save_scene(scene_id, list(snapshot_entities), options)
 
     async def delete_scene(call):
         entity_id = call.data.get("entity_id")
