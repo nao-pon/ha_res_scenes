@@ -95,10 +95,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
             label_entities = [
                 label_entry.entity_id
                 for label_entry in all_entities
-                if label_id in getattr(entry, "labels", set())
+                if label_id in getattr(label_entry, "labels", set())
             ]
             snapshot_entities.update(label_entities)
-
         # Filter out non-existing entities
         states = hass.states
         snapshot_entities = {
