@@ -18,8 +18,6 @@ async def async_setup_entry(hass, entry, async_add_entities):
         for scene_id, data in manager.stored_data.items()
     ]
     async_add_entities(entities)
-    if not hass.data[DOMAIN].get("entities"):
-        hass.data[DOMAIN]["entities"] = {}
     for entity in entities:
         hass.data[DOMAIN]["entities"][entity.entity_id] = entity
 
