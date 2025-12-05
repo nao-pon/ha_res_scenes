@@ -335,19 +335,6 @@ class ResSceneManager:
                 return
             await call_service(domain, service, {"entity_id": eid}, target)
 
-            # if "media_content_id" in attrs and "media_content_type" in attrs:
-            #     await call_service(
-            #         domain,
-            #         "play_media",
-            #         {
-            #             "entity_id": eid,
-            #             "media": {
-            #                 "media_content_id": attrs["media_content_id"],
-            #                 "media_content_type": attrs["media_content_type"],
-            #             },
-            #         },
-            #         target,
-            #     )
             if "volume_level" in attrs:
                 await call_service(
                     domain,
@@ -365,13 +352,6 @@ class ResSceneManager:
                     {"entity_id": eid, "source": attrs["source"]},
                     target,
                 )
-            # if "media_position" in attrs:
-            #     await call_service(
-            #         domain,
-            #         "media_seek",
-            #         {"entity_id": eid, "seek_position": attrs["media_position"]},
-            #         target,
-            #     )
 
         # ---- lock ----
         elif domain == "lock":
@@ -418,8 +398,11 @@ class ResSceneManager:
         else:
             _LOGGER.debug("Domain %s not handled, skip.", domain)
 
-    def get_scene(self, scene_id):
+    def get_scene(self, scene_id: str):
         return self.stored_data.get(scene_id)
 
     def set_user_options(self, user_options: dict):
         self._user_options = deepcopy(user_options)
+
+    def get_user_options(self):
+        return self._user_options.copy()

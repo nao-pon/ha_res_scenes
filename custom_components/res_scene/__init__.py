@@ -117,7 +117,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         # Build options dictionary using user options defaults
         options = {
             key: call.data.get(key, default)
-            for key, default in manager._user_options.items()
+            for key, default in manager.get_user_options().items()
         }
 
         # Save scene
