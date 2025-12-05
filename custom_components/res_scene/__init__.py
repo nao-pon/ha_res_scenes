@@ -38,13 +38,14 @@ async def async_setup_entry(hass, entry):
 
     # regist service
     async def save_scene(call):
-        scene_id = call.data.get("scene_id")
+        scene_id = call.data.get("scene_id", "")
 
         # If no scene_id, raise an error
-        if scene_id is None:
+        if scene_id != "":
             raise HomeAssistantError(
                 "Missing required field: scene_id.",
                 translation_key="no_scene_id",
+                translation_domain=DOMAIN,
             )
 
         manager = hass.data[DOMAIN]["manager"]
@@ -57,7 +58,6 @@ async def async_setup_entry(hass, entry):
 
         # Expand entities from areas
         snapshot_areas = call.data.get("snapshot_areas") or []
-        ent_reg = entity_registry.async_get(hass)
         for area_id in snapshot_areas:
             area_entries = entity_registry.async_entries_for_area(ent_reg, area_id)
             snapshot_entities.update(entry.entity_id for entry in area_entries)
@@ -85,6 +85,7 @@ async def async_setup_entry(hass, entry):
             raise HomeAssistantError(
                 "No valid entities found.",
                 translation_key="no_valid_entities",
+                translation_domain=DOMAIN,
             )
 
         # Build options dictionary using user options defaults
@@ -118,7 +119,7 @@ async def async_setup_entry(hass, entry):
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, ["scene"])
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     hass.data.get(DOMAIN, {}).pop("manager", None)
     return unload_ok
