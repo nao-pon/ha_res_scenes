@@ -190,7 +190,17 @@ class ResSceneManager:
         return success
 
     async def apply_state(self, eid: str, info: dict, options: dict):
-        """Restore state + attributes for each entity with sequential calls and delay"""
+        """
+        Restore an entity's saved state and attributes by calling the appropriate Home Assistant services with short delays between service calls.
+        
+        Parameters:
+        	eid (str): The entity_id to restore (e.g., "light.kitchen").
+        	info (dict): Saved scene data for the entity. Expected keys:
+        		- "state": The saved state value (string).
+        		- "attributes": A mapping of attribute names to saved values.
+        	options (dict): Runtime options that affect restoration behavior. Recognized key:
+        		- "restore_light_attributes" (bool): If true, restore light attributes even when the saved state is "off".
+        """
         domain = eid.split(".")[0]
         state = info.get("state")
         target = {"entity_id": eid}
@@ -399,10 +409,28 @@ class ResSceneManager:
             _LOGGER.debug("Domain %s not handled, skip.", domain)
 
     def get_scene(self, scene_id: str):
+        """
+        Retrieve stored data for a scene by its identifier.
+        
+        Returns:
+            The scene data dictionary if found, otherwise None.
+        """
         return self.stored_data.get(scene_id)
 
     def set_user_options(self, user_options: dict):
+        """
+        Store a deep copy of per-user scene restoration options.
+        
+        Parameters:
+            user_options (dict): Mapping of user-specific option keys to values; the input is deep-copied and replaces the manager's current user options.
+        """
         self._user_options = deepcopy(user_options)
 
     def get_user_options(self):
+        """
+        Return a shallow copy of the currently stored per-user scene options.
+        
+        Returns:
+            dict: A shallow copy of the internal user options mapping.
+        """
         return self._user_options.copy()
