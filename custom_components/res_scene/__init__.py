@@ -88,11 +88,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
         # Expand entities from labels
         snapshot_labels = call.data.get("snapshot_labels") or []
-        all_entites = ent_reg.entities.values()
+        all_entities = ent_reg.entities.values()
         for label_id in snapshot_labels:
             label_entities = [
                 entry.entity_id
-                for entry in all_entites
+                for entry in all_entities
                 if label_id in getattr(entry, "labels", set())
             ]
             snapshot_entities.update(label_entities)
@@ -158,5 +158,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     """
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
-    hass.data.get(DOMAIN, {}).pop("manager", None)
+    if unload_ok:
+        domain_data = hass.data.get(DOMAIN)
+        if domain_data is not None:
+            domain_data.pop("manager", None)
     return unload_ok
