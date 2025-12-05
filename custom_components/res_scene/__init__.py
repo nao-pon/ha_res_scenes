@@ -84,15 +84,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         snapshot_areas = call.data.get("snapshot_areas") or []
         for area_id in snapshot_areas:
             area_entries = entity_registry.async_entries_for_area(ent_reg, area_id)
-            snapshot_entities.update(entry.entity_id for entry in area_entries)
+            snapshot_entities.update(
+                area_entry.entity_id for area_entry in area_entries
+            )
 
         # Expand entities from labels
         snapshot_labels = call.data.get("snapshot_labels") or []
         all_entities = ent_reg.entities.values()
         for label_id in snapshot_labels:
             label_entities = [
-                entry.entity_id
-                for entry in all_entities
+                label_entry.entity_id
+                for label_entry in all_entities
                 if label_id in getattr(entry, "labels", set())
             ]
             snapshot_entities.update(label_entities)
