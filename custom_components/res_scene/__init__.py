@@ -12,12 +12,12 @@ PLATFORMS = ["scene", "select"]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """
-    Set up the integration entry by initializing storage and the scene manager, restoring saved scenes, forwarding platform setups, and registering scene services.
-
+    Initialize the integration: set up persistent storage and the scene manager, restore saved scenes, forward platform setups, and register scene services.
+    
     Parameters:
         hass (HomeAssistant): Home Assistant core instance.
         entry (ConfigEntry): Configuration entry for this integration.
-
+    
     Returns:
         True when setup completes successfully.
     """
@@ -49,16 +49,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     # regist service
     async def save_scene(call):
         """
-        Create or update a saved scene from the provided service call data and persist it via the scene manager.
-
+        Create or update a saved scene from service call data and persist it via the scene manager.
+        
         Parameters:
-            call (homeassistant.core.ServiceCall): Service call containing scene data. Expected keys in call.data:
-                - "scene_id": identifier for the scene (required).
-                - "snapshot_entities": optional iterable of entity_ids to include.
-                - "snapshot_areas": optional iterable of area_ids whose entities will be included.
-                - "snapshot_labels": optional iterable of label ids whose entities will be included.
-                - any user option keys to override manager defaults.
-
+            call (homeassistant.core.ServiceCall): Service call carrying scene data in call.data. Recognized keys:
+                - scene_id: (str) Identifier for the scene (required).
+                - snapshot_entities: (iterable[str]) Entity IDs to include.
+                - snapshot_areas: (iterable[str]) Area IDs whose entities will be included.
+                - snapshot_labels: (iterable[str]) Label IDs whose entities will be included.
+                - Any user option keys to override manager defaults.
+        
         Raises:
             HomeAssistantError: If "scene_id" is missing or if no valid entities are found to include in the scene.
         """
