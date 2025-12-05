@@ -12,13 +12,33 @@ create:
     snapshot_entities:
       name: Snapshot Entities
       description: List of entity IDs to snapshot.
-      required: true
+      required: false
       selector:
         entity:
           multiple: true
       example:
         - light.living_room
         - switch.aircon
+    snapshot_areas:
+      name: Snapshot Areas
+      description: Capture all entities belonging to these areas.
+      required: false
+      selector:
+        area:
+          multiple: true
+      example:
+        - living_room
+        - kitchen
+    snapshot_labels:
+      name: Snapshot Labels
+      description: Capture all entities having these labels.
+      required: false
+      selector:
+        label:
+          multiple: true
+      example:
+        - nighttime
+        - security
     options:
       name: Options
       description: Additional options for scene creation.

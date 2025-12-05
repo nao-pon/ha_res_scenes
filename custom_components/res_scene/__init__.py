@@ -1,5 +1,7 @@
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import entity_registry
 from homeassistant.helpers.storage import Store
 
 from .const import DOMAIN, STORE_VERSION
@@ -8,7 +10,17 @@ from .scene_manager import ResSceneManager
 PLATFORMS = ["scene", "select"]
 
 
-async def async_setup_entry(hass, entry):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """
+    Set up the integration entry by initializing storage and the scene manager, restoring saved scenes, forwarding platform setups, and registering scene services.
+
+    Parameters:
+        hass (HomeAssistant): Home Assistant core instance.
+        entry (ConfigEntry): Configuration entry for this integration.
+
+    Returns:
+        True when setup completes successfully.
+    """
     store = Store(hass, STORE_VERSION, f"{DOMAIN}.json")
     stored_data = await store.async_load() or {}
 
@@ -36,16 +48,88 @@ async def async_setup_entry(hass, entry):
 
     # regist service
     async def save_scene(call):
-        scene_id = call.data.get("scene_id")
-        snapshot_entities = call.data.get("snapshot_entities", [])
+        """
+        Create or update a saved scene from the provided service call data and persist it via the scene manager.
+
+        Parameters:
+            call (homeassistant.core.ServiceCall): Service call containing scene data. Expected keys in call.data:
+                - "scene_id": identifier for the scene (required).
+                - "snapshot_entities": optional iterable of entity_ids to include.
+                - "snapshot_areas": optional iterable of area_ids whose entities will be included.
+                - "snapshot_labels": optional iterable of label ids whose entities will be included.
+                - any user option keys to override manager defaults.
+
+        Raises:
+            HomeAssistantError: If "scene_id" is missing or if no valid entities are found to include in the scene.
+        """
+        scene_id = call.data.get("scene_id", "")
+
+        # If no scene_id, raise an error
+        if not scene_id:
+            raise HomeAssistantError(
+                "Missing required field: scene_id.",
+                translation_key="no_scene_id",
+                translation_domain=DOMAIN,
+            )
+
+        manager = hass.data[DOMAIN]["manager"]
+
+        # Collect snapshot entities (initial list)
+        snapshot_entities = set(call.data.get("snapshot_entities") or [])
+
+        # Get entity registry
+        ent_reg = entity_registry.async_get(hass)
+
+        # Expand entities from areas
+        snapshot_areas = call.data.get("snapshot_areas") or []
+        for area_id in snapshot_areas:
+            area_entries = entity_registry.async_entries_for_area(ent_reg, area_id)
+            snapshot_entities.update(
+                area_entry.entity_id for area_entry in area_entries
+            )
+
+        # Expand entities from labels
+        snapshot_labels = call.data.get("snapshot_labels") or []
+        all_entities = ent_reg.entities.values()
+        for label_id in snapshot_labels:
+            label_entities = [
+                label_entry.entity_id
+                for label_entry in all_entities
+                if label_id in getattr(label_entry, "labels", set())
+            ]
+            snapshot_entities.update(label_entities)
+        # Filter out non-existing entities
+        states = hass.states
+        snapshot_entities = {
+            entity_id
+            for entity_id in snapshot_entities
+            if states.get(entity_id) is not None
+        }
+
+        # If no valid entities remain, raise an error
+        if not snapshot_entities:
+            raise HomeAssistantError(
+                "No valid entities found.",
+                translation_key="no_valid_entities",
+                translation_domain=DOMAIN,
+            )
+
+        # Build options dictionary using user options defaults
         options = {
             key: call.data.get(key, default)
             for key, default in manager._user_options.items()
         }
-        if scene_id and snapshot_entities:
-            await manager.save_scene(scene_id, snapshot_entities, options)
+
+        # Save scene
+        await manager.save_scene(scene_id, list(snapshot_entities), options)
 
     async def delete_scene(call):
+        """
+        Delete the scene associated with the provided scene entity, if one exists.
+
+        Parameters:
+            call (ServiceCall): Service call data containing the "entity_id" of the scene entity to delete. If "entity_id" is missing or the entity is not associated with a stored scene, the function does nothing.
+        """
         entity_id = call.data.get("entity_id")
         if entity_id:
             if entity := hass.data[DOMAIN]["entities"].get(entity_id):
@@ -53,6 +137,12 @@ async def async_setup_entry(hass, entry):
                 await manager.delete_scene(scene_id)
 
     async def apply_scene(call):
+        """
+        Apply the scene associated with the provided scene entity.
+
+        Parameters:
+            call (ServiceCall): Service call data containing the "entity_id" of the scene entity to apply.
+        """
         entity_id = call.data.get("entity_id")
         if entity_id:
             if entity := hass.data[DOMAIN]["entities"].get(entity_id):
@@ -67,7 +157,16 @@ async def async_setup_entry(hass, entry):
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, ["scene"])
+    """
+    Unload the integration's platforms and remove its manager instance from hass.data.
 
-    hass.data.get(DOMAIN, {}).pop("manager", None)
+    Returns:
+        True if platforms were unloaded successfully, False otherwise.
+    """
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+    if unload_ok:
+        domain_data = hass.data.get(DOMAIN)
+        if domain_data is not None:
+            domain_data.pop("manager", None)
     return unload_ok

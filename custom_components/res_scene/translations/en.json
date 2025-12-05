@@ -1,5 +1,11 @@
 {
   "title": "Restorable Scenes",
+  "entity": {
+    "errors": {
+      "no_scene_id": "No 'scene_id' was provided. The field 'scene_id' is required to create a persistent scene.",
+      "no_valid_entities": "No valid entities were found. At least one entity, area, or label must resolve to existing entities."
+    }
+  },
   "services": {
     "create": {
       "name": "Create Persistent Scene",
@@ -12,6 +18,14 @@
         "snapshot_entities": {
           "name": "Snapshot Entities",
           "description": "List of entity IDs to snapshot."
+        },
+        "snapshot_areas": {
+          "name": "Snapshot Areas",
+          "description": "List of areas. All entities belonging to these areas will be snapshotted."
+        },
+        "snapshot_labels": {
+          "name": "Snapshot Labels",
+          "description": "List of labels. All entities assigned to these labels will be snapshotted."
         },
         "options": {
           "name": "Options",

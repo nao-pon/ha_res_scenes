@@ -1,5 +1,11 @@
 {
   "title": "永続シーン",
+  "entity": {
+    "errors": {
+      "no_scene_id": "'scene_id' が指定されていません。永続シーンを作成するには 'scene_id' の指定が必須です。",
+      "no_valid_entities": "有効なエンティティがありません。少なくとも1つ以上のエンティティ、エリア、またはラベルが有効なエンティティに解決される必要があります。"
+    }
+  },
   "services": {
     "create": {
       "name": "永続シーンを作成",
@@ -13,7 +19,15 @@
           "name": "スナップショット対象エンティティ",
           "description": "状態を保存する entity_id のリスト。"
         },
-        "options": {
+        "snapshot_areas": {
+          "name": "スナップショット対象エリア",
+          "description": "各エリアに属するすべてのエンティティがスナップショットされます。"
+        },
+        "snapshot_labels": {
+          "name": "スナップショット対象ラベル",
+          "description": "各ラベルに紐づくすべてのエンティティがスナップショットされます。"
+        },
+          "options": {
           "name": "オプション",
           "description": "シーン作成に関する追加オプションです。"
         },
