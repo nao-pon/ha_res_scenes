@@ -11,6 +11,16 @@ PLATFORMS = ["scene", "select"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry):
+    """
+    Set up the integration entry by initializing storage and the scene manager, restoring saved scenes, forwarding platform setups, and registering scene services.
+    
+    Parameters:
+        hass (HomeAssistant): Home Assistant core instance.
+        entry (ConfigEntry): Configuration entry for this integration.
+    
+    Returns:
+        True if setup completed successfully, False otherwise.
+    """
     store = Store(hass, STORE_VERSION, f"{DOMAIN}.json")
     stored_data = await store.async_load() or {}
 
@@ -38,6 +48,20 @@ async def async_setup_entry(hass: HomeAssistant, entry):
 
     # regist service
     async def save_scene(call):
+        """
+        Create or update a saved scene from the provided service call data and persist it via the scene manager.
+        
+        Parameters:
+            call (homeassistant.core.ServiceCall): Service call containing scene data. Expected keys in call.data:
+                - "scene_id": identifier for the scene (required).
+                - "snapshot_entities": optional iterable of entity_ids to include.
+                - "snapshot_areas": optional iterable of area_ids whose entities will be included.
+                - "snapshot_labels": optional iterable of label ids whose entities will be included.
+                - any user option keys to override manager defaults.
+        
+        Raises:
+            HomeAssistantError: If "scene_id" is missing or if no valid entities are found to include in the scene.
+        """
         scene_id = call.data.get("scene_id", "")
 
         # If no scene_id, raise an error
@@ -98,6 +122,12 @@ async def async_setup_entry(hass: HomeAssistant, entry):
         await manager.save_scene(scene_id, list(snapshot_entities), options)
 
     async def delete_scene(call):
+        """
+        Delete the scene associated with the provided scene entity, if one exists.
+        
+        Parameters:
+            call (ServiceCall): Service call data containing the "entity_id" of the scene entity to delete. If "entity_id" is missing or the entity is not associated with a stored scene, the function does nothing.
+        """
         entity_id = call.data.get("entity_id")
         if entity_id:
             if entity := hass.data[DOMAIN]["entities"].get(entity_id):
@@ -119,6 +149,12 @@ async def async_setup_entry(hass: HomeAssistant, entry):
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """
+    Unload the integration's platforms and remove its manager instance from hass.data.
+    
+    Returns:
+        True if platforms were unloaded successfully, False otherwise.
+    """
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     hass.data.get(DOMAIN, {}).pop("manager", None)
