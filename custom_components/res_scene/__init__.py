@@ -137,6 +137,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
                 await manager.delete_scene(scene_id)
 
     async def apply_scene(call):
+        """
+        Apply the scene associated with the provided scene entity.
+
+        Parameters:
+            call (ServiceCall): Service call data containing the "entity_id" of the scene entity to apply.
+        """
         entity_id = call.data.get("entity_id")
         if entity_id:
             if entity := hass.data[DOMAIN]["entities"].get(entity_id):
