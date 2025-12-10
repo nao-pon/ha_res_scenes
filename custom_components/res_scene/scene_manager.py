@@ -14,9 +14,9 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
-from homeassistant.helpers.event import async_track_state_change
+from homeassistant.helpers.event import async_track_state_change_event
 
 from .const import DOMAIN
 
@@ -48,6 +48,126 @@ class ResSceneManager:
         # stored_data: {scene_id: {entity_id: {"state": ..., "attributes": {...}}}}
         self._user_options: dict[str, Any] = {}
 
+    async def async_call_and_wait_state(
+        self,
+        entity_id: str,
+        domain: str,
+        service: str,
+        service_data: dict | None = None,
+        target: dict[str, Any] | None = None,
+        timeout: float = 5.0,
+        expected: str | None = None,
+    ):
+        """
+        Call a service and wait for entity state change.
+
+        Args:
+            entity_id: Target entity to observe
+            domain: Service domain (e.g. 'light')
+            service: Service name (e.g. 'turn_on')
+            service_data: Dict passed to hass.services.async_call()
+            target: Dict passed to hass.services.async_call()
+            timeout: Max seconds to wait
+            expected: If provided, wait until state == expected
+
+        Returns:
+            dict: {
+                "entity_id": str,
+                "old_state": State | None,
+                "new_state": State | None,
+                "old_value": str | None,
+                "new_value": str | None,
+                "matched": bool,
+                "timeout": bool,
+            }
+        """
+        hass = self.hass
+
+        future: asyncio.Future = asyncio.get_running_loop().create_future()
+
+        @callback
+        def _state_changed(event: Event[EventStateChangedData]):
+            if event.data.get("entity_id") != entity_id:
+                return
+
+            new_state = event.data.get("new_state")
+            old_state = event.data.get("old_state")
+            new_value = new_state.state if new_state else None
+            old_value = old_state.state if old_state else None
+
+            # wait until matched state to expected
+            if expected is not None and new_value != expected:
+                return
+
+            if not future.done():
+                future.set_result(
+                    {
+                        "entity_id": entity_id,
+                        "old_state": old_state,
+                        "new_state": new_state,
+                        "old_value": old_value,
+                        "new_value": new_value,
+                        "matched": (new_value == expected) if expected else True,
+                        "timeout": False,
+                    }
+                )
+
+        # regist event listener
+        remove_listener = async_track_state_change_event(
+            hass, [entity_id], _state_changed
+        )
+
+        # call service
+        await hass.services.async_call(
+            domain,
+            service,
+            service_data or {},
+            target=target or {"entity_id": entity_id},
+            blocking=False,
+        )
+
+        try:
+            result = await asyncio.wait_for(future, timeout)
+        except asyncio.TimeoutError:
+            result = {
+                "entity_id": entity_id,
+                "old_value": None,
+                "new_value": None,
+                "old_state": None,
+                "new_state": None,
+                "matched": False,
+                "timeout": True,
+            }
+        finally:
+            remove_listener()
+
+        return result
+
+    async def async_run_actions_sequentially(self, actions: list[dict]):
+        """
+        Run actions sequentially.
+        Each dict must contain:
+            - domain
+            - service
+            - data (service_data)
+            - entity_id (to observe)
+            - expected (optional)
+
+        Returns result list.
+        """
+        results = []
+        for action in actions:
+            result = await self.async_call_and_wait_state(
+                entity_id=action["entity_id"],
+                domain=action["domain"],
+                service=action["service"],
+                service_data=action.get("data", {}),
+                expected=action.get("expected"),
+                timeout=action.get("timeout", 5.0),
+            )
+            results.append(result)
+        return results
+
     async def restore_scenes(self):
         """Restore saved scenes on restart (EntityRegistry creation)"""
         for scene_id in self.stored_data.keys():
@@ -65,35 +185,25 @@ class ResSceneManager:
 
         async def snapshot_light(eid: str, state: str):
             """Take snapshot for a single light"""
-            state_obj = self.hass.states.get(eid)
-            future = asyncio.Future()
-
-            def callback(entity_id, old_state, new_state, fut=future):
-                if not fut.done() and new_state.state == "on" and new_state.attributes:
-                    fut.set_result(new_state)
-
-            unsub = async_track_state_change(self.hass, [eid], callback)
-
-            try:
-                # temporarily turn on
-                await self.hass.services.async_call(
-                    "light", "turn_on", {"entity_id": eid}, blocking=True
-                )
-
-                # wait for state to reflect
-                try:
-                    state_obj = await asyncio.wait_for(future, timeout=1.0)
-                except asyncio.TimeoutError:
-                    state_obj = self.hass.states.get(eid)  # fallback
-
-                # restore turn off
-                await self.hass.services.async_call(
-                    "light", "turn_off", {"entity_id": eid}
-                )
-            finally:
-                unsub()
-
-            return {"state_obj": state_obj, "save_state": state}
+            results = await self.async_run_actions_sequentially(
+                [
+                    {
+                        "domain": "light",
+                        "service": "turn_on",
+                        "entity_id": eid,
+                        "data": None,
+                        "expected": "on",
+                    },
+                    {
+                        "domain": "light",
+                        "service": "turn_off",
+                        "entity_id": eid,
+                        "data": None,
+                        "expected": None,
+                    },
+                ]
+            )
+            return {"state_obj": results[0].get("new_state"), "save_state": state}
 
         tasks = []
         for eid in snapshot_entities:
@@ -242,7 +352,7 @@ class ResSceneManager:
         # small helper for sequential calls with delay
         async def call_service(service_domain, service, data, target):
             await self.hass.services.async_call(service_domain, service, data, target)
-            await asyncio.sleep(1)  # 1秒間隔、必要に応じて変更可能
+            await asyncio.sleep(1)  # 1 second interval, can be changed as needed
 
         # ---- light ----
         if domain == "light":
@@ -259,8 +369,17 @@ class ResSceneManager:
 
             if should_restore:
                 data = {"entity_id": eid, **safe_attrs}
-                await call_service("light", "turn_on", data, target=target)
-
+                await self.async_run_actions_sequentially(
+                    [
+                        {
+                            "domain": "light",
+                            "service": "turn_on",
+                            "entity_id": eid,
+                            "data": data,
+                            "expected": "on",
+                        },
+                    ]
+                )
             if state == "off":
                 await call_service(
                     "light", "turn_off", {"entity_id": eid}, target=target
