@@ -54,7 +54,6 @@ class ResSceneManager:
         domain: str,
         service: str,
         service_data: dict | None = None,
-        target: dict[str, Any] | None = None,
         timeout: float = 5.0,
         expected: str | None = None,
     ):
@@ -66,7 +65,6 @@ class ResSceneManager:
             domain: Service domain (e.g. 'light')
             service: Service name (e.g. 'turn_on')
             service_data: Dict passed to hass.services.async_call()
-            target: Dict passed to hass.services.async_call()
             timeout: Max seconds to wait
             expected: If provided, wait until state == expected
 
@@ -122,7 +120,7 @@ class ResSceneManager:
             domain,
             service,
             service_data or {},
-            target=target or {"entity_id": entity_id},
+            target={"entity_id": entity_id},
             blocking=False,
         )
 
@@ -152,8 +150,11 @@ class ResSceneManager:
             - data (service_data)
             - entity_id (to observe)
             - expected (optional)
+            - timeout (optional, default 5.0)
 
-        Returns result list.
+        Returns:
+            list[dict]: Result dictionaries with 'timeout' and 'matched' flags.
+                Callers must validate results to detect failures.
         """
         results = []
         for action in actions:
@@ -369,7 +370,7 @@ class ResSceneManager:
 
             if should_restore:
                 data = {"entity_id": eid, **safe_attrs}
-                await self.async_run_actions_sequentially(
+                results = await self.async_run_actions_sequentially(
                     [
                         {
                             "domain": "light",
@@ -380,6 +381,13 @@ class ResSceneManager:
                         },
                     ]
                 )
+                if results[0].get("timeout") or not results[0].get("matched"):
+                    _LOGGER.warning(
+                        "Failed to restore light %s to 'on' state: %s",
+                        eid,
+                        "timeout" if results[0].get("timeout") else "state mismatch"
+                    )
+
             if state == "off":
                 await call_service(
                     "light", "turn_off", {"entity_id": eid}, target=target
