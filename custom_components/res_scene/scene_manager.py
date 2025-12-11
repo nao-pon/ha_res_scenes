@@ -3,7 +3,43 @@ import logging
 from copy import deepcopy
 from typing import Any
 
+from homeassistant.components.climate.const import (
+    ATTR_FAN_MODE,
+    ATTR_HUMIDITY,
+    ATTR_HVAC_MODE,
+    ATTR_PRESET_MODE,
+    ATTR_SWING_MODE,
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_TARGET_TEMP_LOW,
+    SERVICE_SET_TEMPERATURE,
+    HVACMode,
+)
+from homeassistant.components.lock.const import LockState
+from homeassistant.components.media_player.const import (
+    ATTR_INPUT_SOURCE,
+    ATTR_MEDIA_VOLUME_LEVEL,
+    SERVICE_SELECT_SOURCE,
+)
 from homeassistant.const import (
+    ATTR_DOMAIN,
+    ATTR_ENTITY_ID,
+    ATTR_SERVICE,
+    ATTR_SERVICE_DATA,
+    ATTR_STATE,
+    ATTR_TEMPERATURE,
+    SERVICE_CLOSE_COVER,
+    SERVICE_LOCK,
+    SERVICE_MEDIA_PAUSE,
+    SERVICE_MEDIA_PLAY,
+    SERVICE_MEDIA_STOP,
+    SERVICE_OPEN_COVER,
+    SERVICE_SELECT_OPTION,
+    SERVICE_SET_COVER_POSITION,
+    SERVICE_SET_COVER_TILT_POSITION,
+    SERVICE_TURN_OFF,
+    SERVICE_TURN_ON,
+    SERVICE_UNLOCK,
+    SERVICE_VOLUME_SET,
     STATE_CLOSED,
     STATE_IDLE,
     STATE_OFF,
@@ -61,6 +97,10 @@ class ResSceneManager:
         """
         Call a service and wait for entity state change.
 
+        Note: Captures any state change on entity_id, regardless of source.
+        Callers must serialize operations on the same entity to avoid
+        attributing state changes from concurrent operations.
+
         Args:
             entity_id: Target entity to observe
             domain: Service domain (e.g. 'light')
@@ -98,7 +138,7 @@ class ResSceneManager:
             if not future.done():
                 future.set_result(
                     {
-                        "entity_id": entity_id,
+                        ATTR_ENTITY_ID: entity_id,
                         "old_state": old_state,
                         "new_state": new_state,
                         "old_value": old_value,
@@ -120,7 +160,7 @@ class ResSceneManager:
             domain,
             service,
             service_data or {},
-            target={"entity_id": entity_id},
+            target={ATTR_ENTITY_ID: entity_id},
             blocking=False,
         )
 
@@ -128,7 +168,7 @@ class ResSceneManager:
             result = await asyncio.wait_for(future, timeout)
         except asyncio.TimeoutError:
             result = {
-                "entity_id": entity_id,
+                ATTR_ENTITY_ID: entity_id,
                 "old_value": None,
                 "new_value": None,
                 "old_state": None,
@@ -159,10 +199,10 @@ class ResSceneManager:
         results = []
         for action in actions:
             result = await self.async_call_and_wait_state(
-                entity_id=action["entity_id"],
-                domain=action["domain"],
-                service=action["service"],
-                service_data=action.get("data", {}),
+                entity_id=action[ATTR_ENTITY_ID],
+                domain=action[ATTR_DOMAIN],
+                service=action[ATTR_SERVICE],
+                service_data=action.get(ATTR_SERVICE_DATA, {}),
                 expected=action.get("expected"),
                 timeout=action.get("timeout", 5.0),
             )
@@ -189,18 +229,18 @@ class ResSceneManager:
             results = await self.async_run_actions_sequentially(
                 [
                     {
-                        "domain": "light",
-                        "service": "turn_on",
-                        "entity_id": eid,
-                        "data": None,
-                        "expected": "on",
+                        ATTR_DOMAIN: "light",
+                        ATTR_SERVICE: SERVICE_TURN_ON,
+                        ATTR_ENTITY_ID: eid,
+                        ATTR_SERVICE_DATA: None,
+                        "expected": STATE_ON,
                     },
                     {
-                        "domain": "light",
-                        "service": "turn_off",
-                        "entity_id": eid,
-                        "data": None,
-                        "expected": None,
+                        ATTR_DOMAIN: "light",
+                        ATTR_SERVICE: SERVICE_TURN_OFF,
+                        ATTR_ENTITY_ID: eid,
+                        ATTR_SERVICE_DATA: None,
+                        "expected": STATE_OFF,
                     },
                 ]
             )
@@ -237,14 +277,14 @@ class ResSceneManager:
                 if (
                     _options.get("restore_light_attributes")
                     and domain == "light"
-                    and state_obj.state == "off"
+                    and state_obj.state == STATE_OFF
                 ):
                     # Make async snapshot task
-                    tasks.append(snapshot_light(eid, "off"))
+                    tasks.append(snapshot_light(eid, STATE_OFF))
                 else:
                     # Add what is readily available immediately
                     states[eid] = {
-                        "state": state_obj.state,
+                        ATTR_STATE: state_obj.state,
                         "attributes": deepcopy(state_obj.attributes),
                     }
 
@@ -259,7 +299,7 @@ class ResSceneManager:
                 if state_obj:
                     eid = state_obj.entity_id
                     states[eid] = {
-                        "state": save_state,
+                        ATTR_STATE: save_state,
                         "attributes": deepcopy(state_obj.attributes),
                     }
 
@@ -328,14 +368,14 @@ class ResSceneManager:
         Parameters:
                 eid (str): The entity_id to restore (e.g., "light.kitchen").
                 info (dict): Saved scene data for the entity. Expected keys:
-                        - "state": The saved state value (string).
-                        - "attributes": A mapping of attribute names to saved values.
+                    - "state": The saved state value (string).
+                    - "attributes": A mapping of attribute names to saved values.
                 options (dict): Runtime options that affect restoration behavior. Recognized key:
-                        - "restore_light_attributes" (bool): If true, restore light attributes even when the saved state is "off".
+                    - "restore_light_attributes" (bool): If true, restore light attributes even when the saved state is STATE_OFF.
         """
         domain = eid.split(".")[0]
-        state = info.get("state")
-        target = {"entity_id": eid}
+        state = info.get(ATTR_STATE)
+        target = {ATTR_ENTITY_ID: eid}
         attrs = {}
         for _key, _value in info.get("attributes", {}).items():
             if _value is not None:
@@ -379,7 +419,7 @@ class ResSceneManager:
         # ---- light ----
         if domain == "light":
             restore_attrs = options.get("restore_light_attributes", False)
-            should_restore = (state == "on") or restore_attrs
+            should_restore = (state == STATE_ON) or restore_attrs
 
             color_mode = attrs.get("color_mode", "onoff")
             allowed_attrs = COLOR_MODE_ATTRS.get(color_mode, set())
@@ -390,32 +430,24 @@ class ResSceneManager:
             }
 
             if should_restore:
-                data = {"entity_id": eid, **safe_attrs}
-                results = await self.async_run_actions_sequentially(
-                    [
-                        {
-                            "domain": "light",
-                            "service": "turn_on",
-                            "entity_id": eid,
-                            "data": data,
-                            "expected": "on",
-                        },
-                    ]
+                data = {ATTR_ENTITY_ID: eid, **safe_attrs}
+                result = await self.async_call_and_wait_state(
+                    entity_id=eid,
+                    domain="light",
+                    service=SERVICE_TURN_ON,
+                    service_data=data,
+                    expected=STATE_ON,
                 )
-                if (
-                    not results
-                    or results[0].get("timeout")
-                    or not results[0].get("matched")
-                ):
+                if result.get("timeout") or not result.get("matched"):
                     _LOGGER.warning(
                         "Failed to restore light %s to 'on' state: %s",
                         eid,
-                        "timeout" if results[0].get("timeout") else "state mismatch",
+                        "timeout" if result.get("timeout") else "state mismatch",
                     )
 
-            if state == "off":
+            if state == STATE_OFF:
                 await call_service(
-                    "light", "turn_off", {"entity_id": eid}, target=target
+                    "light", SERVICE_TURN_OFF, {ATTR_ENTITY_ID: eid}, target=target
                 )
 
         # ---- cover ----
@@ -426,26 +458,28 @@ class ResSceneManager:
             if position is not None:
                 await call_service(
                     "cover",
-                    "set_cover_position",
-                    {"entity_id": eid, "position": position},
+                    SERVICE_SET_COVER_POSITION,
+                    {ATTR_ENTITY_ID: eid, "position": position},
                     target,
                 )
             if tilt is not None:
                 await call_service(
                     "cover",
-                    "set_cover_tilt_position",
-                    {"entity_id": eid, "tilt_position": tilt},
+                    SERVICE_SET_COVER_TILT_POSITION,
+                    {ATTR_ENTITY_ID: eid, "tilt_position": tilt},
                     target,
                 )
 
             if position is None and tilt is None:
-                if state in (STATE_OPEN, "open"):
-                    service = "open_cover"
-                elif state in (STATE_CLOSED, "closed"):
-                    service = "close_cover"
+                if state == STATE_OPEN:
+                    service = SERVICE_OPEN_COVER
+                elif state == STATE_CLOSED:
+                    service = SERVICE_CLOSE_COVER
                 else:
-                    service = "open_cover" if state == "on" else "close_cover"
-                await call_service("cover", service, {"entity_id": eid}, target)
+                    service = (
+                        SERVICE_OPEN_COVER if state == STATE_ON else SERVICE_CLOSE_COVER
+                    )
+                await call_service("cover", service, {ATTR_ENTITY_ID: eid}, target)
 
         # ---- climate ----
         elif domain == "climate":
@@ -453,71 +487,79 @@ class ResSceneManager:
 
             if hvac_mode:
                 data = {
-                    "entity_id": eid,
-                    "hvac_mode": hvac_mode,
+                    ATTR_ENTITY_ID: eid,
+                    ATTR_HVAC_MODE: hvac_mode,
                 }
                 if (
-                    hvac_mode == "heat_cool"
-                    and "target_temp_low" in attrs
-                    and "target_temp_high" in attrs
+                    hvac_mode == HVACMode.HEAT_COOL
+                    and ATTR_TARGET_TEMP_LOW in attrs
+                    and ATTR_TARGET_TEMP_HIGH in attrs
                 ):
                     data.update(
                         {
-                            "target_temp_low": attrs["target_temp_low"],
-                            "target_temp_high": attrs["target_temp_high"],
+                            ATTR_TARGET_TEMP_LOW: attrs[ATTR_TARGET_TEMP_LOW],
+                            ATTR_TARGET_TEMP_HIGH: attrs[ATTR_TARGET_TEMP_HIGH],
                         }
                     )
-                    await call_service("climate", "set_temperature", data, target)
-                elif "temperature" in attrs:
-                    data.update({"temperature": attrs["temperature"]})
-                    await call_service("climate", "set_temperature", data, target)
+                    await call_service("climate", SERVICE_SET_TEMPERATURE, data, target)
+                elif ATTR_TEMPERATURE in attrs:
+                    data.update({ATTR_TEMPERATURE: attrs[ATTR_TEMPERATURE]})
+                    await call_service("climate", SERVICE_SET_TEMPERATURE, data, target)
 
                 # 3. other sub-attributes
-                for key in ["fan_mode", "swing_mode", "preset_mode", "aux_heat"]:
+                for key in [
+                    ATTR_FAN_MODE,
+                    ATTR_SWING_MODE,
+                    ATTR_PRESET_MODE,
+                    ATTR_HUMIDITY,
+                ]:
                     if key in attrs:
                         svc = f"set_{key}"
                         await call_service(
-                            "climate", svc, {"entity_id": eid, key: attrs[key]}, target
+                            "climate",
+                            svc,
+                            {ATTR_ENTITY_ID: eid, key: attrs[key]},
+                            target,
                         )
 
         # ---- media_player ----
         elif domain == "media_player":
-            if state in (STATE_ON, "on"):
-                service = "turn_on"
+            if state in (STATE_ON, STATE_ON):
+                service = SERVICE_TURN_ON
             elif state == STATE_OFF:
-                service = "turn_off"
+                service = SERVICE_TURN_OFF
             elif state == STATE_PLAYING:
-                service = "media_play"
+                service = SERVICE_MEDIA_PLAY
             elif state == STATE_PAUSED:
-                service = "media_pause"
+                service = SERVICE_MEDIA_PAUSE
             elif state == STATE_IDLE:
-                service = "media_stop"
+                service = SERVICE_MEDIA_STOP
             else:
                 _LOGGER.warning("Unknown media_player state: %s", state)
                 return
-            await call_service(domain, service, {"entity_id": eid}, target)
+            await call_service(domain, service, {ATTR_ENTITY_ID: eid}, target)
 
             if "volume_level" in attrs:
                 await call_service(
                     domain,
-                    "volume_set",
+                    SERVICE_VOLUME_SET,
                     {
-                        "entity_id": eid,
-                        "volume_level": attrs["volume_level"],
+                        ATTR_ENTITY_ID: eid,
+                        ATTR_MEDIA_VOLUME_LEVEL: attrs[ATTR_MEDIA_VOLUME_LEVEL],
                     },
                     target,
                 )
             if "source" in attrs:
                 await call_service(
                     domain,
-                    "select_source",
-                    {"entity_id": eid, "source": attrs["source"]},
+                    SERVICE_SELECT_SOURCE,
+                    {ATTR_ENTITY_ID: eid, ATTR_INPUT_SOURCE: attrs[ATTR_INPUT_SOURCE]},
                     target,
                 )
 
         # ---- lock ----
         elif domain == "lock":
-            service = "lock" if state == "locked" else "unlock"
+            service = SERVICE_LOCK if state == LockState.LOCKED else SERVICE_UNLOCK
             data = {"entity_id": eid}
             await call_service(domain, service, data, target)
 
@@ -530,15 +572,15 @@ class ResSceneManager:
             "switch",
             "input_boolean",
         ):
-            service = "turn_on" if state == "on" else "turn_off"
-            await call_service(domain, service, {"entity_id": eid}, target)
+            service = SERVICE_TURN_ON if state == STATE_ON else SERVICE_TURN_OFF
+            await call_service(domain, service, {ATTR_ENTITY_ID: eid}, target)
 
         # ---- input_number ----
         elif domain == "input_number":
             await call_service(
                 "input_number",
                 "set_value",
-                {"entity_id": eid, "value": float(state)},
+                {ATTR_ENTITY_ID: eid, "value": float(state)},
                 target,
             )
 
@@ -546,15 +588,15 @@ class ResSceneManager:
         elif domain == "input_select":
             await call_service(
                 "input_select",
-                "select_option",
-                {"entity_id": eid, "option": state},
+                SERVICE_SELECT_OPTION,
+                {ATTR_ENTITY_ID: eid, "option": state},
                 target,
             )
 
         # ---- input_text ----
         elif domain == "input_text":
             await call_service(
-                "input_text", "set_value", {"entity_id": eid, "value": state}, target
+                "input_text", "set_value", {ATTR_ENTITY_ID: eid, "value": state}, target
             )
 
         else:
