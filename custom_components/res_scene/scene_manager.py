@@ -423,7 +423,7 @@ class ResSceneManager:
         # small helper for sequential calls with delay
         async def call_service(service_domain, service, data, target):
             await self.hass.services.async_call(
-                service_domain, service, data, blocking=True, target=target
+                service_domain, service, data, blocking=False, target=target
             )
             await asyncio.sleep(SERVICE_CALL_DELAY)
 
