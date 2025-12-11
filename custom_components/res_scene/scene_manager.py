@@ -23,6 +23,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 DISPATCHER_UPDATE = "res_scene_updated"
+SERVICE_CALL_DELAY = 1.0  # Delay in seconds when calling a service to the same entity
 
 COLOR_MODE_ATTRS = {
     "onoff": set(),
@@ -102,7 +103,9 @@ class ResSceneManager:
                         "new_state": new_state,
                         "old_value": old_value,
                         "new_value": new_value,
-                        "matched": (new_value == expected) if expected else True,
+                        "matched": True
+                        if expected is None
+                        else (new_value == expected),
                         "timeout": False,
                     }
                 )
@@ -260,7 +263,8 @@ class ResSceneManager:
                         "attributes": deepcopy(state_obj.attributes),
                     }
 
-        states["_options"] = options
+        if options is not None:
+            states["_options"] = options
         self.stored_data[scene_id] = states
         await self.store.async_save(self.stored_data)
         async_dispatcher_send(self.hass, f"{DOMAIN}_scene_added", scene_id)
@@ -287,7 +291,15 @@ class ResSceneManager:
 
         states = deepcopy(self.stored_data[scene_id] or {})
         _options = deepcopy(self._user_options)
-        _options.update(states.pop("_options", {}))
+        saved_options = states.pop("_options", {}) or {}
+        if not isinstance(saved_options, dict):
+            _LOGGER.warning(
+                "Ignored invalid _options for scene %s: %r",
+                scene_id,
+                saved_options,
+            )
+        else:
+            _options.update(saved_options)
 
         success = True
 
@@ -362,7 +374,7 @@ class ResSceneManager:
         # small helper for sequential calls with delay
         async def call_service(service_domain, service, data, target):
             await self.hass.services.async_call(service_domain, service, data, target)
-            await asyncio.sleep(1)  # 1 second interval, can be changed as needed
+            await asyncio.sleep(SERVICE_CALL_DELAY)
 
         # ---- light ----
         if domain == "light":
@@ -390,7 +402,11 @@ class ResSceneManager:
                         },
                     ]
                 )
-                if results[0].get("timeout") or not results[0].get("matched"):
+                if (
+                    not results
+                    or results[0].get("timeout")
+                    or not results[0].get("matched")
+                ):
                     _LOGGER.warning(
                         "Failed to restore light %s to 'on' state: %s",
                         eid,
@@ -501,7 +517,7 @@ class ResSceneManager:
 
         # ---- lock ----
         elif domain == "lock":
-            service = "lock" if state == "lock" else "unlock"
+            service = "lock" if state == "locked" else "unlock"
             data = {"entity_id": eid}
             await call_service(domain, service, data, target)
 
