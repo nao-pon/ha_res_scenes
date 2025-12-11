@@ -586,10 +586,15 @@ class ResSceneManager:
 
         # ---- input_number ----
         elif domain == "input_number":
+            try:
+                value = float(state)
+            except (ValueError, TypeError):
+                _LOGGER.warning("Invalid input_number state for %s: %r", eid, state)
+                return
             await call_service(
                 "input_number",
                 "set_value",
-                {ATTR_ENTITY_ID: eid, "value": float(state)},
+                {ATTR_ENTITY_ID: eid, "value": value},
                 target,
             )
 
