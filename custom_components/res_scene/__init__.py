@@ -13,11 +13,11 @@ PLATFORMS = ["scene", "select"]
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """
     Initialize the integration: set up persistent storage and the scene manager, restore saved scenes, forward platform setups, and register scene services.
-    
+
     Parameters:
         hass (HomeAssistant): Home Assistant core instance.
         entry (ConfigEntry): Configuration entry for this integration.
-    
+
     Returns:
         True when setup completes successfully.
     """
@@ -31,7 +31,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     if "manager" not in hass.data[DOMAIN]:
         hass.data[DOMAIN]["manager"] = ResSceneManager(hass, store, stored_data)
 
-    manager = hass.data[DOMAIN]["manager"]
+    manager: ResSceneManager = hass.data[DOMAIN]["manager"]
 
     manager.set_user_options(
         {
@@ -50,7 +50,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     async def save_scene(call):
         """
         Create or update a saved scene from service call data and persist it via the scene manager.
-        
+
         Parameters:
             call (homeassistant.core.ServiceCall): Service call carrying scene data in call.data. Recognized keys:
                 - scene_id: (str) Identifier for the scene (required).
@@ -58,7 +58,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
                 - snapshot_areas: (iterable[str]) Area IDs whose entities will be included.
                 - snapshot_labels: (iterable[str]) Label IDs whose entities will be included.
                 - Any user option keys to override manager defaults.
-        
+
         Raises:
             HomeAssistantError: If "scene_id" is missing or if no valid entities are found to include in the scene.
         """
@@ -71,8 +71,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
                 translation_key="no_scene_id",
                 translation_domain=DOMAIN,
             )
-
-        manager = hass.data[DOMAIN]["manager"]
 
         # Collect snapshot entities (initial list)
         snapshot_entities = set(call.data.get("snapshot_entities") or [])
