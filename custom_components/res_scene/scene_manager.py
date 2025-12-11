@@ -85,9 +85,6 @@ class ResSceneManager:
 
         @callback
         def _state_changed(event: Event[EventStateChangedData]):
-            if event.data.get("entity_id") != entity_id:
-                return
-
             new_state = event.data.get("new_state")
             old_state = event.data.get("old_state")
             new_value = new_state.state if new_state else None
@@ -204,7 +201,17 @@ class ResSceneManager:
                     },
                 ]
             )
-            return {"state_obj": results[0].get("new_state"), "save_state": state}
+            turn_on_result = results[0]
+            if turn_on_result.get("timeout") or not turn_on_result.get("matched"):
+                _LOGGER.warning(
+                    "Failed to capture light attributes for %s: turn_on %s",
+                    eid,
+                    "timed out"
+                    if turn_on_result.get("timeout")
+                    else "did not match expected state",
+                )
+                return None
+            return {"state_obj": turn_on_result.get("new_state"), "save_state": state}
 
         tasks = []
         for eid in snapshot_entities:
@@ -242,6 +249,8 @@ class ResSceneManager:
         if tasks:
             results = await asyncio.gather(*tasks)
             for result in results:
+                if result is None:
+                    continue
                 state_obj = result["state_obj"]
                 save_state = result["save_state"]
                 if state_obj:
@@ -385,7 +394,7 @@ class ResSceneManager:
                     _LOGGER.warning(
                         "Failed to restore light %s to 'on' state: %s",
                         eid,
-                        "timeout" if results[0].get("timeout") else "state mismatch"
+                        "timeout" if results[0].get("timeout") else "state mismatch",
                     )
 
             if state == "off":
