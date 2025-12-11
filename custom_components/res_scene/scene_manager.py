@@ -245,6 +245,7 @@ class ResSceneManager:
                 ]
             )
             turn_on_result = results[0]
+            turn_off_result = results[1]
             if turn_on_result.get("timeout") or not turn_on_result.get("matched"):
                 _LOGGER.warning(
                     "Failed to capture light attributes for %s: turn_on %s",
@@ -254,6 +255,14 @@ class ResSceneManager:
                     else "did not match expected state",
                 )
                 return None
+            if turn_off_result.get("timeout") or not turn_off_result.get("matched"):
+                _LOGGER.warning(
+                    "Light %s did not reach 'off' state after snapshot: %s",
+                    eid,
+                    "timed out"
+                    if turn_off_result.get("timeout")
+                    else "did not match expected state",
+                )
             return {"state_obj": turn_on_result.get("new_state"), "save_state": state}
 
         tasks = []
