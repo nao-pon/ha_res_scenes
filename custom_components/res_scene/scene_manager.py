@@ -524,7 +524,7 @@ class ResSceneManager:
 
         # ---- media_player ----
         elif domain == "media_player":
-            if state in (STATE_ON, STATE_ON):
+            if state == STATE_ON:
                 service = SERVICE_TURN_ON
             elif state == STATE_OFF:
                 service = SERVICE_TURN_OFF
@@ -539,7 +539,7 @@ class ResSceneManager:
                 return
             await call_service(domain, service, {ATTR_ENTITY_ID: eid}, target)
 
-            if "volume_level" in attrs:
+            if ATTR_MEDIA_VOLUME_LEVEL in attrs:
                 await call_service(
                     domain,
                     SERVICE_VOLUME_SET,
@@ -549,7 +549,7 @@ class ResSceneManager:
                     },
                     target,
                 )
-            if "source" in attrs:
+            if ATTR_INPUT_SOURCE in attrs:
                 await call_service(
                     domain,
                     SERVICE_SELECT_SOURCE,
