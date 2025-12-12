@@ -445,6 +445,12 @@ class ResSceneManager:
             if allowed_attrs is None:
                 color_mode = attrs.get("color_mode", "color_temp")
                 allowed_attrs = COLOR_MODE_ATTRS.get(color_mode, set())
+                if color_mode not in COLOR_MODE_ATTRS:
+                    _LOGGER.warning(
+                        "Unknown color_mode '%s' for %s, allowing only common attributes",
+                        color_mode,
+                        eid,
+                    )
 
             safe_attrs = {
                 k: v
