@@ -239,6 +239,7 @@ class ResSceneManager:
                         ATTR_ENTITY_ID: eid,
                         ATTR_SERVICE_DATA: None,
                         "expected": STATE_ON,
+                        "timeout": 20,
                     },
                     {
                         ATTR_DOMAIN: "light",
@@ -316,6 +317,14 @@ class ResSceneManager:
                         ATTR_STATE: save_state,
                         "attributes": deepcopy(state_obj.attributes),
                     }
+
+        # Restore a saved state if the specified entity's data is unavailable
+        for prev_eid, prev_state in self.stored_data.get(scene_id, {}).items():
+            if prev_eid in snapshot_entities and (
+                prev_eid not in states
+                or states.get(prev_eid, {}).get(ATTR_STATE) == STATE_UNAVAILABLE
+            ):
+                states[prev_eid] = prev_state
 
         if options is not None:
             states["_options"] = options
@@ -470,6 +479,7 @@ class ResSceneManager:
                     service=SERVICE_TURN_ON,
                     service_data=data,
                     expected=STATE_ON,
+                    timeout=20,
                 )
                 if result.get("timeout") or not result.get("matched"):
                     _LOGGER.warning(
