@@ -239,6 +239,7 @@ class ResSceneManager:
                         ATTR_ENTITY_ID: eid,
                         ATTR_SERVICE_DATA: None,
                         "expected": STATE_ON,
+                        "timeout": 20,
                     },
                     {
                         ATTR_DOMAIN: "light",
@@ -316,6 +317,31 @@ class ResSceneManager:
                         ATTR_STATE: save_state,
                         "attributes": deepcopy(state_obj.attributes),
                     }
+
+        # Restore a saved state if the specified entity's data is unavailable
+        for prev_eid, prev_state in self.stored_data.get(scene_id, {}).items():
+            if prev_eid in snapshot_entities and (
+                prev_eid not in states
+                or states.get(prev_eid, {}).get(ATTR_STATE) == STATE_UNAVAILABLE
+            ):
+                # Only use fallback if the previous state itself is valid
+                if prev_state.get(ATTR_STATE) not in (
+                    STATE_UNAVAILABLE,
+                    STATE_UNKNOWN,
+                    None,
+                ):
+                    states[prev_eid] = deepcopy(prev_state)
+                    _LOGGER.info(
+                        "Using fallback state for %s in scene '%s' (current state unavailable)",
+                        prev_eid,
+                        scene_id,
+                    )
+                else:
+                    _LOGGER.warning(
+                        "Skipping fallback for %s in scene '%s' (previous state also invalid)",
+                        prev_eid,
+                        scene_id,
+                    )
 
         if options is not None:
             states["_options"] = options
@@ -470,6 +496,7 @@ class ResSceneManager:
                     service=SERVICE_TURN_ON,
                     service_data=data,
                     expected=STATE_ON,
+                    timeout=20,
                 )
                 if result.get("timeout") or not result.get("matched"):
                     _LOGGER.warning(
