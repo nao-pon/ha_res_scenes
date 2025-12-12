@@ -324,7 +324,24 @@ class ResSceneManager:
                 prev_eid not in states
                 or states.get(prev_eid, {}).get(ATTR_STATE) == STATE_UNAVAILABLE
             ):
-                states[prev_eid] = prev_state
+                # Only use fallback if the previous state itself is valid
+                if prev_state.get(ATTR_STATE) not in (
+                    STATE_UNAVAILABLE,
+                    STATE_UNKNOWN,
+                    None,
+                ):
+                    states[prev_eid] = prev_state
+                    _LOGGER.info(
+                        "Using fallback state for %s in scene '%s' (current state unavailable)",
+                        prev_eid,
+                        scene_id,
+                    )
+                else:
+                    _LOGGER.warning(
+                        "Skipping fallback for %s in scene '%s' (previous state also invalid)",
+                        prev_eid,
+                        scene_id,
+                    )
 
         if options is not None:
             states["_options"] = options
