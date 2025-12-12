@@ -69,10 +69,15 @@ COLOR_MODE_ATTRS = {
     "rgbw": {"rgbw_color", "brightness", "brightness_pct"},
     "rgbww": {"rgbww_color", "brightness", "brightness_pct"},
     "xy": {"xy_color", "brightness", "brightness_pct"},
-    "color_temp": {"color_temp", "kelvin", "brightness", "brightness_pct"},
+    "color_temp": {"color_temp", "color_temp_kelvin", "brightness", "brightness_pct"},
 }
 
-COMMON_LIGHT_ATTRS = {"effect", "flash", "transition", "white_value", "profile"}
+ATTR_ATTRS = {
+    "profile": {"brightness", "brightness_pct"},
+    "white": {"brightness", "brightness_pct"},
+}
+
+COMMON_LIGHT_ATTRS = {"effect", "flash", "transition", "white", "profile"}
 
 
 class ResSceneManager:
@@ -432,13 +437,30 @@ class ResSceneManager:
             restore_attrs = options.get("restore_light_attributes", False)
             should_restore = (state == STATE_ON) or restore_attrs
 
-            color_mode = attrs.get("color_mode", "onoff")
-            allowed_attrs = COLOR_MODE_ATTRS.get(color_mode, set())
+            allowed_attrs = None
+            for attr, allowed_keys in ATTR_ATTRS.items():
+                if attr in attrs:
+                    allowed_attrs = allowed_keys
+                    break
+            if allowed_attrs is None:
+                color_mode = attrs.get("color_mode", "color_temp")
+                allowed_attrs = COLOR_MODE_ATTRS.get(color_mode, set())
+                if color_mode not in COLOR_MODE_ATTRS:
+                    _LOGGER.warning(
+                        "Unknown color_mode '%s' for %s, allowing only common attributes",
+                        color_mode,
+                        eid,
+                    )
+
             safe_attrs = {
                 k: v
                 for k, v in attrs.items()
                 if k in allowed_attrs or k in COMMON_LIGHT_ATTRS
             }
+            if "color_temp_kelvin" in safe_attrs and "color_temp" in safe_attrs:
+                safe_attrs.pop("color_temp")
+            if "brightness" in safe_attrs and "brightness_pct" in safe_attrs:
+                safe_attrs.pop("brightness_pct")
 
             if should_restore:
                 data = {ATTR_ENTITY_ID: eid, **safe_attrs}
