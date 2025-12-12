@@ -77,7 +77,7 @@ ATTR_ATTRS = {
     "white": {"brightness", "brightness_pct"},
 }
 
-COMMON_LIGHT_ATTRS = {"effect", "flash", "transition", "white", "profile"}
+COMMON_LIGHT_ATTRS = {"effect", "flash", "white", "profile"}
 
 
 class ResSceneManager:
@@ -237,7 +237,7 @@ class ResSceneManager:
                         ATTR_DOMAIN: "light",
                         ATTR_SERVICE: SERVICE_TURN_ON,
                         ATTR_ENTITY_ID: eid,
-                        ATTR_SERVICE_DATA: None,
+                        ATTR_SERVICE_DATA: {"transition": 0},
                         "expected": STATE_ON,
                         "timeout": 20,
                     },
@@ -245,7 +245,7 @@ class ResSceneManager:
                         ATTR_DOMAIN: "light",
                         ATTR_SERVICE: SERVICE_TURN_OFF,
                         ATTR_ENTITY_ID: eid,
-                        ATTR_SERVICE_DATA: None,
+                        ATTR_SERVICE_DATA: {"transition": 0},
                         "expected": STATE_OFF,
                     },
                 ]
@@ -489,7 +489,7 @@ class ResSceneManager:
                 safe_attrs.pop("brightness_pct")
 
             if should_restore:
-                data = {ATTR_ENTITY_ID: eid, **safe_attrs}
+                data = {ATTR_ENTITY_ID: eid, "transition": 0, **safe_attrs}
                 result = await self.async_call_and_wait_state(
                     entity_id=eid,
                     domain="light",
@@ -507,7 +507,10 @@ class ResSceneManager:
 
             if state == STATE_OFF:
                 await call_service(
-                    "light", SERVICE_TURN_OFF, {ATTR_ENTITY_ID: eid}, target=target
+                    "light",
+                    SERVICE_TURN_OFF,
+                    {ATTR_ENTITY_ID: eid, "transition": 0},
+                    target=target,
                 )
 
         # ---- cover ----
