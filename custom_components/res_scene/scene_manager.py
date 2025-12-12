@@ -439,7 +439,7 @@ class ResSceneManager:
 
             allowed_attrs = None
             for attr, allowed_keys in ATTR_ATTRS.items():
-                if attr in restore_attrs:
+                if attr in attrs:
                     allowed_attrs = allowed_keys
                     break
             if allowed_attrs is None:
