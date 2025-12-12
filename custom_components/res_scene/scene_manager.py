@@ -330,7 +330,7 @@ class ResSceneManager:
                     STATE_UNKNOWN,
                     None,
                 ):
-                    states[prev_eid] = prev_state
+                    states[prev_eid] = deepcopy(prev_state)
                     _LOGGER.info(
                         "Using fallback state for %s in scene '%s' (current state unavailable)",
                         prev_eid,
