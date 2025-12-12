@@ -443,13 +443,13 @@ class ResSceneManager:
                     allowed_attrs = allowed_keys
                     break
             if allowed_attrs is None:
-                color_mode = attrs.get("color_mode", "onoff")
+                color_mode = attrs.get("color_mode", "color_temp")
                 allowed_attrs = COLOR_MODE_ATTRS.get(color_mode, set())
 
             safe_attrs = {
                 k: v
                 for k, v in attrs.items()
-                if v is not None and (k in allowed_attrs or k in COMMON_LIGHT_ATTRS)
+                if k in allowed_attrs or k in COMMON_LIGHT_ATTRS
             }
             if "color_temp_kelvin" in safe_attrs and "color_temp" in safe_attrs:
                 safe_attrs.pop("color_temp")
