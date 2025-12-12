@@ -451,9 +451,9 @@ class ResSceneManager:
                 for k, v in attrs.items()
                 if v is not None and (k in allowed_attrs or k in COMMON_LIGHT_ATTRS)
             }
-            if safe_attrs.get("color_temp_kelvin") and safe_attrs.get("color_temp"):
+            if "color_temp_kelvin" in safe_attrs and "color_temp" in safe_attrs:
                 safe_attrs.pop("color_temp")
-            if safe_attrs.get("brightness") and safe_attrs.get("brightness_pct"):
+            if "brightness" in safe_attrs and "brightness_pct" in safe_attrs:
                 safe_attrs.pop("brightness_pct")
 
             if should_restore:
