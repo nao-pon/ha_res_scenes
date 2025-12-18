@@ -27,6 +27,8 @@ By contrast, Home Assistant's built-in `scene.create` only generates temporary s
 
 ### HACS (recommended)
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=nao-pon&repository=ha_res_scenes&category=integration)
+
 1. Open HACS → **Integrations**  
 2. Add this repository as a **Custom Repository** (category: Integration)  
 3. Install the integration and restart Home Assistant
