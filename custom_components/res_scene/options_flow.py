@@ -18,6 +18,9 @@ class ResSceneOptionsFlow(config_entries.OptionsFlow):
         restore_light_attributes = self.config_entry.options.get(
             "restore_light_attributes", False
         )
+        action_timeout = self.config_entry.options.get(
+            "action_timeout", ACTION_TIMEOUT_DEFAULT
+        )
         scenes = list(manager.stored_data.keys())
         scenes_select = sorted(scenes)
 
@@ -26,7 +29,7 @@ class ResSceneOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(
                     "restore_light_attributes", default=restore_light_attributes
                 ): bool,
-                vol.Required("action_timeout", default=ACTION_TIMEOUT_DEFAULT): float,
+                vol.Required("action_timeout", default=action_timeout): float,
                 vol.Optional("delete_scene"): vol.In(scenes_select),
                 vol.Optional("rename_from"): vol.In(scenes_select),
                 vol.Optional("rename_to", default=""): str,
