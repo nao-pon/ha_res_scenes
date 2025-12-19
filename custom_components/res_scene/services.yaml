@@ -58,10 +58,11 @@ create:
           #       - light.ColorMode.COLOR_TEMP
           #       - light.ColorMode.HS
         action_timeout:
+          name: Action timeout
+          description: Timeout in seconds for actions that check results.
           selector:
             float:
           example: 20
-   
 delete:
   name: Delete Persistent Scene
   description: Delete a previously created persistent scene.
