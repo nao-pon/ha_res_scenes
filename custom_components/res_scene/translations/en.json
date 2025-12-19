@@ -58,8 +58,8 @@
         "title": "Res Scenes Options",
         "description": "Configure default options and manage saved scenes.",
         "data": {
-          "restore_light_attributes": "[Deafult Value] Restore light attributes when capturing a scene",
-          "action_timeout": "[Deafult Value] Action timeout (seconds)",
+          "restore_light_attributes": "[Default Value] Restore light attributes when capturing a scene",
+          "action_timeout": "[Default Value] Action timeout (seconds)",
           "delete_scene": "Delete a scene",
           "rename_from": "Rename from",
           "rename_to": "Rename to"
