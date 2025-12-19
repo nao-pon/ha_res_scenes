@@ -247,6 +247,7 @@ class ResSceneManager:
                         ATTR_ENTITY_ID: eid,
                         ATTR_SERVICE_DATA: {"transition": 0},
                         "expected": STATE_OFF,
+                        "timeout": 20,
                     },
                 ]
             )
@@ -496,7 +497,7 @@ class ResSceneManager:
                     service=SERVICE_TURN_ON,
                     service_data=data,
                     expected=STATE_ON,
-                    timeout=20,
+                    timeout=30,
                 )
                 if result.get("timeout") or not result.get("matched"):
                     _LOGGER.warning(
@@ -506,12 +507,21 @@ class ResSceneManager:
                     )
 
             if state == STATE_OFF:
-                await call_service(
-                    "light",
-                    SERVICE_TURN_OFF,
-                    {ATTR_ENTITY_ID: eid, "transition": 0},
-                    target=target,
+                data = {ATTR_ENTITY_ID: eid, "transition": 0}
+                result = await self.async_call_and_wait_state(
+                    entity_id=eid,
+                    domain="light",
+                    service=SERVICE_TURN_OFF,
+                    service_data=data,
+                    expected=STATE_OFF,
+                    timeout=30,
                 )
+                if result.get("timeout") or not result.get("matched"):
+                    _LOGGER.warning(
+                        "Failed to restore light %s to 'off' state: %s",
+                        eid,
+                        "timeout" if result.get("timeout") else "state mismatch",
+                    )
 
         # ---- cover ----
         elif domain == "cover":
