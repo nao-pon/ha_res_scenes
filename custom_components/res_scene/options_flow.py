@@ -13,22 +13,22 @@ class ResSceneOptionsFlow(config_entries.OptionsFlow):
     async def async_step_init(self, user_input=None):
         """
         Handle the options form for scene settings and apply submitted changes.
-        
+
         When no input is provided, presents a form allowing the user to:
         - Toggle whether light attributes are restored.
         - Set the action timeout.
         - Select a scene to delete.
         - Select a scene to rename and provide the new name.
-        
+
         When submitted, will:
         - Delete the selected scene if requested.
         - Rename a scene when both a source and a non-empty target name are provided; if the target name already exists (and is different), record a form error and do not perform the rename.
         - Persist storage after a successful rename and dispatch signals indicating scene removal and addition.
-        
+
         Parameters:
             user_input (dict | None): Form data submitted by the user, or None when displaying the form. Expected keys include
                 "restore_light_attributes", "action_timeout", optionally "delete_scene", "rename_from", and "rename_to".
-        
+
         Returns:
             The flow result directing Home Assistant to either show the form (with any validation errors) or create the updated options entry.
         """
