@@ -54,7 +54,7 @@ from homeassistant.core import Event, EventStateChangedData, HomeAssistant, call
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_track_state_change_event
 
-from .const import DOMAIN
+from .const import ACTION_TIMEOUT_DEFAULT, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ class ResSceneManager:
         domain: str,
         service: str,
         service_data: dict | None = None,
-        timeout: float = 5.0,
+        timeout: float = ACTION_TIMEOUT_DEFAULT,
         expected: str | None = None,
     ):
         """
@@ -209,7 +209,7 @@ class ResSceneManager:
                 service=action[ATTR_SERVICE],
                 service_data=action.get(ATTR_SERVICE_DATA, {}),
                 expected=action.get("expected"),
-                timeout=action.get("timeout", 5.0),
+                timeout=action.get("timeout", ACTION_TIMEOUT_DEFAULT),
             )
             results.append(result)
         return results
@@ -228,6 +228,7 @@ class ResSceneManager:
         _options = deepcopy(self._user_options)
         _options.update(options or {})
         states = {}
+        timeout = _options.get("action_timeout", ACTION_TIMEOUT_DEFAULT)
 
         async def snapshot_light(eid: str, state: str):
             """Take snapshot for a single light"""
@@ -239,7 +240,7 @@ class ResSceneManager:
                         ATTR_ENTITY_ID: eid,
                         ATTR_SERVICE_DATA: {"transition": 0},
                         "expected": STATE_ON,
-                        "timeout": 20,
+                        "timeout": timeout,
                     },
                     {
                         ATTR_DOMAIN: "light",
@@ -247,7 +248,7 @@ class ResSceneManager:
                         ATTR_ENTITY_ID: eid,
                         ATTR_SERVICE_DATA: {"transition": 0},
                         "expected": STATE_OFF,
-                        "timeout": 20,
+                        "timeout": timeout,
                     },
                 ]
             )
@@ -452,6 +453,8 @@ class ResSceneManager:
             _LOGGER.debug("Domain %s is not restorable state %s , skip.", domain, state)
             return
 
+        timeout = options.get("action_timeout", ACTION_TIMEOUT_DEFAULT)
+
         # small helper for sequential calls with delay
         async def call_service(service_domain, service, data, target):
             await self.hass.services.async_call(
@@ -497,13 +500,15 @@ class ResSceneManager:
                     service=SERVICE_TURN_ON,
                     service_data=data,
                     expected=STATE_ON,
-                    timeout=30,
+                    timeout=timeout,
                 )
                 if result.get("timeout") or not result.get("matched"):
                     _LOGGER.warning(
                         "Failed to restore light %s to 'on' state: %s",
                         eid,
-                        "timeout" if result.get("timeout") else "state mismatch",
+                        f"timeout ({timeout}s)"
+                        if result.get("timeout")
+                        else "state mismatch",
                     )
 
             if state == STATE_OFF:
@@ -514,13 +519,15 @@ class ResSceneManager:
                     service=SERVICE_TURN_OFF,
                     service_data=data,
                     expected=STATE_OFF,
-                    timeout=30,
+                    timeout=timeout,
                 )
                 if result.get("timeout") or not result.get("matched"):
                     _LOGGER.warning(
                         "Failed to restore light %s to 'off' state: %s",
                         eid,
-                        "timeout" if result.get("timeout") else "state mismatch",
+                        f"timeout ({timeout}s)"
+                        if result.get("timeout")
+                        else "state mismatch",
                     )
 
         # ---- cover ----

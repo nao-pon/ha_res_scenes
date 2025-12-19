@@ -4,7 +4,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
-from .const import DOMAIN
+from .const import ACTION_TIMEOUT_DEFAULT, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,6 +26,7 @@ class ResSceneOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(
                     "restore_light_attributes", default=restore_light_attributes
                 ): bool,
+                vol.Required("action_timeout", default=ACTION_TIMEOUT_DEFAULT): float,
                 vol.Optional("delete_scene"): vol.In(scenes_select),
                 vol.Optional("rename_from"): vol.In(scenes_select),
                 vol.Optional("rename_to", default=""): str,

@@ -4,7 +4,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers.storage import Store
 
-from .const import DOMAIN, STORE_VERSION
+from .const import ACTION_TIMEOUT_DEFAULT, DOMAIN, STORE_VERSION
 from .scene_manager import ResSceneManager
 
 PLATFORMS = ["scene", "select"]
@@ -37,6 +37,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         {
             "restore_light_attributes": entry.options.get(
                 "restore_light_attributes", False
+            ),
+            "action_timeout": entry.options.get(
+                "action_timeout", ACTION_TIMEOUT_DEFAULT
             ),
         }
     )

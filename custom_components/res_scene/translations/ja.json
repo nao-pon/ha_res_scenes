@@ -34,6 +34,10 @@
         "restore_light_attributes": {
           "name": "ライト属性の復元",
           "description": "有効にすると、スナップショット時にライトがオフでも、明るさや色などのライト属性を復元します。 注意: OFF のライトは一時的に点灯して属性を処理し、その後再び OFF に戻されます。"
+        },
+        "action_timeout": {
+          "name": "アクションのタイムアウト(秒数)",
+          "description": "ライトの属性確認時などの結果をチェックするアクションのタイムアウト秒数。"
         }
       }
     },
@@ -54,7 +58,8 @@
         "title": "Res Scenes オプション",
         "description": "デフォルトオプションの設定やシーン管理を行います。",
         "data": {
-          "restore_light_attributes": "シーン保存時にライト属性を復元する",
+          "restore_light_attributes": "[デフォルト値] シーン保存時にライト属性を復元する",
+          "action_timeout": "[デフォルト値] アクションのタイムアウト(秒数)",
           "delete_scene": "シーンを削除",
           "rename_from": "名前変更（元）",
           "rename_to": "名前変更（新しい名前）"

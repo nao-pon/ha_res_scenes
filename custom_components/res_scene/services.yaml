@@ -57,7 +57,11 @@ create:
           #     supported_color_modes:
           #       - light.ColorMode.COLOR_TEMP
           #       - light.ColorMode.HS
-
+        action_timeout:
+          selector:
+            float:
+          example: 20
+   
 delete:
   name: Delete Persistent Scene
   description: Delete a previously created persistent scene.
