@@ -188,18 +188,21 @@ class ResSceneManager:
 
     async def async_run_actions_sequentially(self, actions: list[dict]):
         """
-        Run actions sequentially.
-        Each dict must contain:
-            - domain
-            - service
-            - data (service_data)
-            - entity_id (to observe)
-            - expected (optional)
-            - timeout (optional, default 5.0)
-
+        Execute a sequence of service actions one after another, awaiting each action's observed state change.
+        
+        Parameters:
+            actions (list[dict]): List of action dictionaries. Each action must include:
+                - 'domain' (str): Service domain to call.
+                - 'service' (str): Service name to call.
+                - 'entity_id' (str): Entity to target and observe for state changes.
+                - 'service_data' (dict, optional): Data to pass to the service call.
+                - 'expected' (str, optional): Expected new state value to consider the action matched.
+                - 'timeout' (float, optional): Seconds to wait for the expected state; falls back to ACTION_TIMEOUT_DEFAULT.
+        
         Returns:
-            list[dict]: Result dictionaries with 'timeout' and 'matched' flags.
-                Callers must validate results to detect failures.
+            list[dict]: A list of result dictionaries for each action. Each result contains keys such as
+            'entity_id', 'old_state', 'new_state', 'matched' (true if expected state was observed), and
+            'timeout' (true if the wait expired).
         """
         results = []
         for action in actions:
@@ -224,14 +227,34 @@ class ResSceneManager:
     async def save_scene(
         self, scene_id: str, snapshot_entities: list, options: dict | None = None
     ):
-        """Save the state and attributes of the specified entity"""
+        """
+        Save a snapshot of the specified entities' states and attributes under the given scene id.
+        
+        Takes current states for each entity in snapshot_entities and persists them as a scene. When enabled via options, lights that are off may be briefly toggled to capture full attributes (color, brightness, etc.). If an entity's current state is unavailable, a previously stored state for the same scene will be used when that previous state is valid. Persists the scene to storage and dispatches a scene-added signal.
+        
+        Parameters:
+            scene_id (str): Identifier to store the scene under.
+            snapshot_entities (list): Iterable of entity IDs to include in the snapshot.
+            options (dict | None): Optional scene-specific options (merged with user options). Recognized keys include:
+                - "action_timeout" (float): timeout in seconds for actions used to capture attributes.
+                - "restore_light_attributes" (bool): if true, attempt to capture full light attributes by briefly turning lights on/off.
+        """
         _options = deepcopy(self._user_options)
         _options.update(options or {})
         states = {}
         timeout = _options.get("action_timeout", ACTION_TIMEOUT_DEFAULT)
 
         async def snapshot_light(eid: str, state: str):
-            """Take snapshot for a single light"""
+            """
+            Capture a light's current on-state attributes by briefly turning it on and then off to create a snapshot.
+            
+            Parameters:
+            	eid (str): Entity ID of the light to snapshot.
+            	state (str): Original state string to record as the saved state.
+            
+            Returns:
+            	dict: {"state_obj": <state object>, "save_state": <state str>} containing the captured state object and the saved state string if the snapshot succeeded, or None if the snapshot failed.
+            """
             results = await self.async_run_actions_sequentially(
                 [
                     {
@@ -405,15 +428,16 @@ class ResSceneManager:
 
     async def apply_state(self, eid: str, info: dict, options: dict):
         """
-        Restore an entity's saved state and attributes by calling the appropriate Home Assistant services with short delays between service calls.
-
+        Restore a single entity to its saved state and attributes by invoking the appropriate Home Assistant services.
+        
         Parameters:
-                eid (str): The entity_id to restore (e.g., "light.kitchen").
-                info (dict): Saved scene data for the entity. Expected keys:
-                    - "state": The saved state value (string).
-                    - "attributes": A mapping of attribute names to saved values.
-                options (dict): Runtime options that affect restoration behavior. Recognized key:
-                    - "restore_light_attributes" (bool): If true, restore light attributes even when the saved state is STATE_OFF.
+            eid (str): The entity_id to restore (e.g., "light.kitchen").
+            info (dict): Saved scene data for the entity. Expected keys:
+                - "state": The saved state value (string).
+                - "attributes": Mapping of attribute names to saved values; attributes with value None are ignored.
+            options (dict): Runtime options that affect restoration behavior. Recognized keys:
+                - "restore_light_attributes" (bool): If true, restore light attributes even when the saved state is STATE_OFF.
+                - "action_timeout" (float): Timeout in seconds used when waiting for expected state changes.
         """
         domain = eid.split(".")[0]
         state = info.get(ATTR_STATE)
@@ -457,6 +481,15 @@ class ResSceneManager:
 
         # small helper for sequential calls with delay
         async def call_service(service_domain, service, data, target):
+            """
+            Call a Home Assistant service for the given target and wait a short delay to throttle subsequent calls.
+            
+            Parameters:
+                service_domain (str): Domain of the service to call (e.g., "light", "switch").
+                service (str): Service name within the domain (e.g., "turn_on", "set_temperature").
+                data (dict | None): Service call data payload; may be None.
+                target (dict | list | str | None): Target specification for the service call (entity_id(s) or target dict).
+            """
             await self.hass.services.async_call(
                 service_domain, service, data, blocking=False, target=target
             )
