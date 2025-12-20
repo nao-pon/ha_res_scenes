@@ -50,7 +50,9 @@ class ResSceneOptionsFlow(config_entries.OptionsFlow):
                 vol.Required(
                     "restore_light_attributes", default=restore_light_attributes
                 ): bool,
-                vol.Required("action_timeout", default=action_timeout): float,
+                vol.Required("action_timeout", default=action_timeout): vol.All(
+                    float, vol.Range(min=0.5)
+                ),
                 vol.Optional("delete_scene"): vol.In(scenes_select),
                 vol.Optional("rename_from"): vol.In(scenes_select),
                 vol.Optional("rename_to", default=""): str,
