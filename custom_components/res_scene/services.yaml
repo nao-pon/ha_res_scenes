@@ -57,7 +57,16 @@ create:
           #     supported_color_modes:
           #       - light.ColorMode.COLOR_TEMP
           #       - light.ColorMode.HS
-
+        action_timeout:
+          name: Action timeout
+          description: Timeout in seconds for actions that check results.
+          selector:
+            number:
+              min: 0.5
+              max: 120
+              step: 0.5
+              mode: slider
+          example: 20
 delete:
   name: Delete Persistent Scene
   description: Delete a previously created persistent scene.
